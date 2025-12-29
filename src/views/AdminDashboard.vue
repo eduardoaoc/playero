@@ -101,6 +101,24 @@
       @created="handleQuadraCreated"
     />
 
+    <ModalCriarCliente
+      :open="isCreateClientOpen"
+      @close="closeCreateClient"
+    />
+
+    <ModalCriarReserva
+      :open="isCreateReservaOpen"
+      @close="closeCreateReserva"
+    />
+
+    <ModalCriarAdmin
+      v-if="isSuperAdmin"
+      :open="isCreateAdminOpen"
+      :is-saving="isAdminSaving"
+      @close="closeCreateAdmin"
+      @submit="handleCreateAdmin"
+    />
+
     <MobileNav :items="mobileNav" />
   </div>
 </template>
@@ -116,6 +134,9 @@ import AcoesRapidas from '../components/AcoesRapidas.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
 import NovaQuadraModal from '../components/modals/NovaQuadraModal.vue';
+import ModalCriarCliente from '../components/modals/ModalCriarCliente.vue';
+import ModalCriarReserva from '../components/modals/ModalCriarReserva.vue';
+import ModalCriarAdmin from '../components/modals/ModalCriarAdmin.vue';
 import { useAuth } from '../stores/auth';
 import { adminDashboardService } from '../services/adminDashboardService';
 import { quadrasService } from '../services/quadrasService';
@@ -124,6 +145,9 @@ const auth = useAuth();
 const userRole = 'super_admin';
 const isSuperAdmin = computed(() => userRole === 'super_admin');
 const canManageQuadras = computed(() =>
+  ['admin', 'super_admin'].includes(userRole.toLowerCase()),
+);
+const canManageReservas = computed(() =>
   ['admin', 'super_admin'].includes(userRole.toLowerCase()),
 );
 
@@ -221,6 +245,10 @@ const infoCards = [
 ];
 
 const isNovaQuadraOpen = ref(false);
+const isCreateClientOpen = ref(false);
+const isCreateReservaOpen = ref(false);
+const isCreateAdminOpen = ref(false);
+const isAdminSaving = ref(false);
 
 const openNovaQuadra = () => {
   if (!canManageQuadras.value) {
@@ -231,6 +259,52 @@ const openNovaQuadra = () => {
 
 const closeNovaQuadra = () => {
   isNovaQuadraOpen.value = false;
+};
+
+const openCreateReserva = () => {
+  if (!canManageReservas.value) {
+    return;
+  }
+  isCreateReservaOpen.value = true;
+};
+
+const closeCreateReserva = () => {
+  isCreateReservaOpen.value = false;
+};
+
+const openCreateClient = () => {
+  isCreateClientOpen.value = true;
+};
+
+const closeCreateClient = () => {
+  isCreateClientOpen.value = false;
+};
+
+const openCreateAdmin = () => {
+  if (!isSuperAdmin.value) {
+    return;
+  }
+  isCreateAdminOpen.value = true;
+};
+
+const closeCreateAdmin = () => {
+  isCreateAdminOpen.value = false;
+};
+
+const handleCreateAdmin = async (payload) => {
+  if (!isSuperAdmin.value) {
+    return;
+  }
+  isAdminSaving.value = true;
+  try {
+    if (!payload) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    closeCreateAdmin();
+  } finally {
+    isAdminSaving.value = false;
+  }
 };
 
 const handleQuadraCreated = (payload) => {
@@ -250,16 +324,26 @@ const handleQuadraCreated = (payload) => {
 };
 
 const acoesRapidas = computed(() => [
-  { label: 'Criar cliente', icon: 'user-plus', href: '/admin/clientes' },
-  { label: 'Criar reserva', icon: 'calendar-plus', href: '/admin/reservas' },
+  { label: 'Criar cliente', icon: 'user-plus', action: openCreateClient, href: '#' },
+  {
+    label: 'Criar reserva',
+    icon: 'calendar-plus',
+    action: canManageReservas.value ? openCreateReserva : null,
+    href: canManageReservas.value ? '#' : '/admin/reservas',
+  },
   {
     label: 'Adicionar quadra',
     icon: 'grid-plus',
     action: canManageQuadras.value ? openNovaQuadra : null,
     href: canManageQuadras.value ? '#' : '/admin/quadras',
   },
-  { label: 'Novo administrador', icon: 'shield', href: '/admin/administradores' },
-  { label: 'Bloquear hor?rio', icon: 'ban', href: '/admin/agenda' },
+  {
+    label: 'Novo administrador',
+    icon: 'shield',
+    action: isSuperAdmin.value ? openCreateAdmin : null,
+    href: isSuperAdmin.value ? '#' : '/admin/administradores',
+  },
+  { label: 'Bloquear horario', icon: 'ban', href: '/admin/agenda' },
 ]);
 
 const mobileNav = [
