@@ -39,11 +39,11 @@ defineProps({
   background: var(--dash-surface, #ffffff);
   border: 1px solid var(--dash-border, #e6e9ef);
   border-radius: var(--dash-radius, 18px);
-  padding: 20px 22px;
-  box-shadow: var(--dash-shadow, 0 18px 40px -30px rgba(15, 23, 42, 0.35));
+  padding: 16px 18px;
+  box-shadow: var(--dash-shadow, 0 18px 40px -32px rgba(15, 23, 42, 0.35));
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .kpi-head {
@@ -55,14 +55,15 @@ defineProps({
 
 .kpi-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--dash-muted, #64748b);
 }
 
 .kpi-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   border: 1px solid var(--dash-border, #e6e9ef);
@@ -71,14 +72,15 @@ defineProps({
 }
 
 .kpi-value {
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 700;
+  line-height: 1.1;
   color: var(--dash-text, #0f172a);
 }
 
 .kpi-meta {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--dash-muted, #64748b);
 }
 </style>

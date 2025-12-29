@@ -1,8 +1,4 @@
-import axios from "axios";
+// Legacy alias to keep imports stable while using the shared API client.
+import apiClient from '../services/apiClient';
 
-const api = axios.create({
-  baseURL: "/",
-  withCredentials: true,
-});
-
-export default api;
+export default apiClient;

@@ -203,9 +203,12 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuth } from '../stores/auth';
 
 const router = useRouter();
+const route = useRoute();
+const auth = useAuth();
 
 const email = ref('');
 const password = ref('');
@@ -217,20 +220,7 @@ const errorDetail = ref('');
 
 const hasError = computed(() => errorHeadline.value.length > 0);
 
-const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').trim();
-
 const loginBackgroundUrl = (import.meta.env.VITE_LOGIN_BG_URL ?? '/images/login.jpg').trim();
-
-const joinUrl = (base, path) => {
-  if (!base) {
-    return path;
-  }
-  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${normalizedBase}${normalizedPath}`;
-};
-
-const apiUrl = (path) => joinUrl(apiBase, path);
 
 const backgroundStyle = computed(() => ({
   backgroundImage: `url(${loginBackgroundUrl})`,
@@ -262,6 +252,21 @@ const setError = (headline, detail) => {
   errorDetail.value = detail;
 };
 
+const getValidationMessage = (error) => {
+  const errors = error?.normalized?.errors;
+  if (errors && typeof errors === 'object') {
+    const firstKey = Object.keys(errors)[0];
+    const value = errors[firstKey];
+    if (Array.isArray(value)) {
+      return value[0];
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+  return error?.normalized?.message || '';
+};
+
 const handleSubmit = async () => {
   if (isSubmitting.value) {
     return;
@@ -271,40 +276,36 @@ const handleSubmit = async () => {
   errorDetail.value = '';
 
   try {
-    const response = await fetch(apiUrl('/api/v1/auth/login'), {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value,
-      }),
-    });
+    await auth.login(email.value, password.value);
 
-    const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        setError('Email ou senha incorretos.', 'Verifique seus dados e tente novamente.');
-      } else if (response.status === 422) {
-        setError('Dados inválidos.', 'Verifique seus dados e tente novamente.');
-      } else if (payload?.message) {
-        setError(payload.message, 'Verifique seus dados e tente novamente.');
-      } else {
-        setError('Não foi possível entrar.', 'Tente novamente em instantes.');
-      }
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '';
+    if (redirect && redirect !== '/login') {
+      router.push(redirect);
       return;
     }
 
-    if (payload?.data?.token) {
-      localStorage.setItem('playero_token', payload.data.token);
+    if (auth.role.value && /admin/i.test(auth.role.value)) {
+      router.push('/admin');
+      return;
     }
 
     router.push('/');
   } catch (error) {
-    setError('Não foi possível entrar.', 'Verifique sua conexão e tente novamente.');
+    const status = error?.response?.status;
+    if (status === 401) {
+      setError('Email ou senha incorretos.', 'Verifique seus dados e tente novamente.');
+      return;
+    }
+    if (status === 422) {
+      const validationMessage = getValidationMessage(error);
+      setError('Dados inv??lidos.', validationMessage || 'Verifique seus dados e tente novamente.');
+      return;
+    }
+    if (error?.normalized?.message) {
+      setError(error.normalized.message, 'Verifique seus dados e tente novamente.');
+      return;
+    }
+    setError('N??o foi poss??vel entrar.', 'Verifique sua conex??o e tente novamente.');
   } finally {
     isSubmitting.value = false;
   }

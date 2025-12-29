@@ -107,15 +107,15 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import api from '../lib/api';
+import { useRoute } from 'vue-router';
 import Header from '../components/Header.vue';
 import QuadraSelect from '../components/QuadraSelect.vue';
 import DateSelect from '../components/DateSelect.vue';
 import HorariosGrid from '../components/HorariosGrid.vue';
 import ReservaResumo from '../components/ReservaResumo.vue';
+import { quadrasService } from '../services/quadrasService';
+import { reservasService } from '../services/reservasService';
 
-const router = useRouter();
 const route = useRoute();
 
 const brandName = 'Playero';
@@ -163,15 +163,6 @@ const monthNames = [
   'Novembro',
   'Dezembro',
 ];
-
-const handleAuthError = (error) => {
-  const status = error?.response?.status;
-  if (status === 401) {
-    router.push('/login');
-    return true;
-  }
-  return false;
-};
 
 const getMonthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
@@ -253,74 +244,19 @@ const podeConfirmar = computed(
     !reservaCriada.value
 );
 
-// Normalize API responses to keep the UI resilient to different payload shapes.
-const normalizeQuadras = (payload) => {
-  const raw =
-    (Array.isArray(payload) && payload) ||
-    (Array.isArray(payload?.data) && payload.data) ||
-    (Array.isArray(payload?.quadras) && payload.quadras) ||
-    (Array.isArray(payload?.data?.data) && payload.data.data) ||
-    [];
-
-  return raw
-    .filter((quadra) => {
-      if (quadra?.ativa !== undefined) {
-        return Boolean(quadra.ativa);
-      }
-      if (quadra?.ativo !== undefined) {
-        return Boolean(quadra.ativo);
-      }
-      if (quadra?.status) {
-        return ['ativa', 'ativo', 'disponivel'].includes(String(quadra.status).toLowerCase());
-      }
-      return true;
-    })
-    .map((quadra, index) => {
-      const quadraId = quadra?.id ?? quadra?.quadra_id;
-      if (quadraId === undefined || quadraId === null) {
-        return null;
-      }
-      return {
-        id: quadraId,
-        name: quadra?.nome ?? quadra?.name ?? `Quadra ${quadraId ?? index + 1}`,
-        type: quadra?.tipo ?? quadra?.modalidade ?? quadra?.categoria ?? quadra?.type ?? 'Quadra',
-        raw: quadra,
-      };
-    })
-    .filter(Boolean);
-};
-
-const normalizeHorarios = (payload) => {
-  const raw =
-    (Array.isArray(payload) && payload) ||
-    (Array.isArray(payload?.data) && payload.data) ||
-    (Array.isArray(payload?.horarios) && payload.horarios) ||
-    (Array.isArray(payload?.data?.horarios) && payload.data.horarios) ||
-    [];
-
-  return raw
-    .map((item, index) => {
-      if (typeof item === 'string') {
-        return {
-          id: `${item}-${index}`,
-          horaInicio: item,
-          horaFim: '',
-          disponivel: true,
-        };
-      }
-      return {
-        id: item?.id ?? `${item?.hora_inicio ?? item?.inicio ?? item?.start ?? index}-${index}`,
-        horaInicio: item?.hora_inicio ?? item?.inicio ?? item?.start ?? item?.hora ?? '',
-        horaFim: item?.hora_fim ?? item?.fim ?? item?.end ?? '',
-        disponivel:
-          item?.disponivel === undefined
-            ? true
-            : item?.disponivel === true ||
-              String(item?.disponivel).toLowerCase() === 'true' ||
-              String(item?.status).toLowerCase() === 'disponivel',
-      };
-    })
-    .filter((item) => item.horaInicio && item.disponivel);
+const getValidationMessage = (error) => {
+  const errors = error?.normalized?.errors;
+  if (errors && typeof errors === 'object') {
+    const firstKey = Object.keys(errors)[0];
+    const value = errors[firstKey];
+    if (Array.isArray(value)) {
+      return value[0];
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+  return error?.normalized?.message || '';
 };
 
 const fetchQuadras = async () => {
@@ -328,8 +264,7 @@ const fetchQuadras = async () => {
   erroQuadras.value = '';
 
   try {
-    const response = await api.get('/api/v1/quadras');
-    quadras.value = normalizeQuadras(response.data);
+    quadras.value = await quadrasService.listQuadras();
 
     const queryId = route.query.quadra ? Number(route.query.quadra) : null;
     if (queryId && !quadraSelecionada.value) {
@@ -339,7 +274,13 @@ const fetchQuadras = async () => {
       }
     }
   } catch (error) {
-    if (handleAuthError(error)) {
+    const status = error?.response?.status;
+    if (status === 403) {
+      erroQuadras.value = error?.normalized?.message || 'Sem permissao para listar quadras.';
+      return;
+    }
+    if (status === 422) {
+      erroQuadras.value = getValidationMessage(error) || 'Dados invalidos. Tente novamente.';
       return;
     }
     erroQuadras.value = 'Nao foi possivel carregar as quadras. Tente novamente.';
@@ -349,13 +290,7 @@ const fetchQuadras = async () => {
 };
 
 const fetchDisponibilidadeRaw = async (quadraId, data) => {
-  const response = await api.get('/api/v1/disponibilidade', {
-    params: {
-      quadra_id: quadraId,
-      data,
-    },
-  });
-  return normalizeHorarios(response.data);
+  return reservasService.getDisponibilidade(quadraId, data);
 };
 
 const loadDisponibilidade = async () => {
@@ -371,7 +306,15 @@ const loadDisponibilidade = async () => {
     const slots = await fetchDisponibilidadeRaw(quadraSelecionada.value.id, dataSelecionada.value);
     horarios.value = slots;
   } catch (error) {
-    if (handleAuthError(error)) {
+    const status = error?.response?.status;
+    if (status === 403) {
+      erroDisponibilidade.value = error?.normalized?.message || 'Sem permissao para consultar horarios.';
+      horarios.value = [];
+      return;
+    }
+    if (status === 422) {
+      erroDisponibilidade.value = getValidationMessage(error) || 'Dados invalidos. Tente novamente.';
+      horarios.value = [];
       return;
     }
     horarios.value = [];
@@ -441,8 +384,6 @@ const loadCalendarMonth = async () => {
   calendarCells.value = monthGrid;
   loadingCalendar.value = true;
 
-  let redirected = false;
-
   const results = await Promise.all(
     monthGrid
       .filter((cell) => cell.inMonth && !cell.isPast)
@@ -454,9 +395,6 @@ const loadCalendarMonth = async () => {
             status: slots.length > 0 ? 'available' : 'unavailable',
           };
         } catch (error) {
-          if (handleAuthError(error)) {
-            redirected = true;
-          }
           return {
             date: cell.date,
             status: 'unknown',
@@ -465,7 +403,7 @@ const loadCalendarMonth = async () => {
       })
   );
 
-  if (requestId !== calendarRequestId.value || redirected) {
+  if (requestId !== calendarRequestId.value) {
     if (requestId === calendarRequestId.value) {
       loadingCalendar.value = false;
     }
@@ -530,13 +468,12 @@ const confirmarReserva = async () => {
   erroReserva.value = '';
 
   try {
-    const response = await api.post('/api/v1/reservas', {
+    const payload = await reservasService.createReserva({
       quadra_id: quadraSelecionada.value.id,
       data: dataSelecionada.value,
       hora_inicio: horarioSelecionado.value.horaInicio,
     });
 
-    const payload = response.data || {};
     const reservaId = payload?.id ?? payload?.data?.id ?? payload?.reserva_id;
     const status = payload?.status ?? payload?.data?.status ?? 'pendente_pagamento';
 
@@ -548,10 +485,16 @@ const confirmarReserva = async () => {
       horario: formatHorarioLabel(horarioSelecionado.value),
     };
   } catch (error) {
-    if (handleAuthError(error)) {
+    const status = error?.response?.status;
+    if (status === 403) {
+      erroReserva.value = error?.normalized?.message || 'Sem permissao para criar reserva.';
       return;
     }
-    if (error?.response?.status === 409) {
+    if (status === 422) {
+      erroReserva.value = getValidationMessage(error) || 'Dados invalidos. Revise e tente novamente.';
+      return;
+    }
+    if (status === 409) {
       erroReserva.value = 'Horario indisponivel. Escolha outro horario.';
     } else {
       erroReserva.value = 'Nao foi possivel confirmar a reserva. Tente novamente.';

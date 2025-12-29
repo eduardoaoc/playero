@@ -2,11 +2,7 @@
   <aside class="dashboard-sidebar">
     <div class="sidebar-brand">
       <div class="sidebar-logo">
-        <span class="sidebar-logo-dot"></span>
-      </div>
-      <div class="sidebar-brand-text">
-        <h1 class="sidebar-title">{{ brand.name }}</h1>
-        <p class="sidebar-subtitle">{{ brand.role }}</p>
+        <img src="/images/logo-text.png" alt="Playero" class="sidebar-logo-image" />
       </div>
     </div>
 
@@ -40,10 +36,39 @@
       </a>
     </nav>
 
+    <div v-if="user?.name" ref="userMenuRef" class="sidebar-user-wrap">
+      <button
+        class="sidebar-user"
+        type="button"
+        :aria-expanded="isMenuOpen"
+        @click.stop="toggleMenu"
+      >
+        <span class="sidebar-user-avatar"></span>
+        <span class="sidebar-user-text">
+          <span class="sidebar-user-name">{{ user.name }}</span>
+          <span class="sidebar-user-role">{{ user.role }}</span>
+        </span>
+        <DashboardIcon
+          name="chevron-down"
+          :size="16"
+          class="sidebar-user-chevron"
+          :class="{ 'is-open': isMenuOpen }"
+        />
+      </button>
+
+      <div v-if="isMenuOpen" class="sidebar-user-menu" @click.stop>
+        <button class="sidebar-user-action" type="button" @click="handleLogout">
+          <DashboardIcon name="logout" :size="16" />
+          Sair
+        </button>
+      </div>
+    </div>
   </aside>
 </template>
 
 <script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import DashboardIcon from './DashboardIcon.vue';
 
 defineProps({
@@ -70,6 +95,47 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  user: {
+    type: Object,
+    default: null,
+  },
+});
+
+const router = useRouter();
+const isMenuOpen = ref(false);
+const userMenuRef = ref(null);
+
+const logout = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+  }
+  router.push('/login');
+};
+
+const handleLogout = () => {
+  isMenuOpen.value = false;
+  logout();
+};
+
+const toggleMenu = () => {
+  isMenuOpen.value = !isMenuOpen.value;
+};
+
+const handleOutsideClick = (event) => {
+  if (!userMenuRef.value) {
+    return;
+  }
+  if (!userMenuRef.value.contains(event.target)) {
+    isMenuOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleOutsideClick);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideClick);
 });
 </script>
 
@@ -84,10 +150,8 @@ defineProps({
   display: flex;
   flex-direction: column;
   gap: 20px;
-  overflow-y: auto;
+  overflow: hidden;
   z-index: 80;
-  scrollbar-width: thin;
-  scrollbar-color: var(--dash-primary, #ff7a00) transparent;
 }
 
 .sidebar-brand {
@@ -98,45 +162,27 @@ defineProps({
 }
 
 .sidebar-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 18px;
-  background: var(--dash-soft, #f1f4f9);
-  display: grid;
-  place-items: center;
-}
-
-.sidebar-logo-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--dash-primary, #ff7a00);
-  box-shadow: 0 0 0 8px var(--dash-primary-soft, rgba(255, 122, 0, 0.12));
-}
-
-.sidebar-brand-text {
+  width: 150px;
+  height: 95%;
+  border-radius: 0;
+  background: transparent;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: center;
 }
 
-.sidebar-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--dash-text, #0f172a);
-}
-
-.sidebar-subtitle {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--dash-muted, #64748b);
+.sidebar-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
 }
 
 .sidebar-section {
@@ -184,24 +230,97 @@ defineProps({
   background: rgba(255, 255, 255, 0.04);
 }
 
-
-.dashboard-sidebar::-webkit-scrollbar {
-  width: 6px;
+.sidebar-user-wrap {
+  margin-top: auto;
+  position: relative;
 }
 
-.dashboard-sidebar::-webkit-scrollbar-track {
-  background: transparent;
+.sidebar-user {
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--dash-border, #e6e9ef);
+  background: var(--dash-surface-soft, #f6f8fb);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
-.dashboard-sidebar::-webkit-scrollbar-thumb {
-  background: var(--dash-primary-soft, rgba(255, 122, 0, 0.3));
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+.sidebar-user-chevron {
+  transition: transform 0.2s ease;
 }
 
-.dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+.sidebar-user-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.sidebar-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--dash-primary-soft, rgba(255, 122, 0, 0.15));
+}
+
+.sidebar-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.sidebar-user-name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--dash-text, #0f172a);
+}
+
+.sidebar-user-role {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dash-muted, #64748b);
+  font-weight: 700;
+}
+
+.sidebar-user-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  min-width: 180px;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--dash-border, #e6e9ef);
+  background: var(--dash-surface-soft, #f6f8fb);
+  box-shadow: var(--dash-shadow, 0 20px 50px -35px rgba(15, 23, 42, 0.35));
+  display: grid;
+  gap: 6px;
+  z-index: 10;
+}
+
+.sidebar-user-action {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--dash-border, #e6e9ef);
+  background: var(--dash-surface, #ffffff);
+  color: var(--dash-text, #0f172a);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-user-action:hover {
   background: var(--dash-primary, #ff7a00);
+  color: #ffffff;
+  border-color: transparent;
 }
 
 @media (max-width: 1024px) {
@@ -210,5 +329,4 @@ defineProps({
   }
 }
 </style>
-
 

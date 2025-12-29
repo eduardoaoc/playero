@@ -165,23 +165,21 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import Header from '../components/Header.vue';
 import HeroBanner from '../components/HeroBanner.vue';
 import QuadraCard from '../components/QuadraCard.vue';
 import ExperienceCard from '../components/ExperienceCard.vue';
 import Footer from '../components/Footer.vue';
+import { homeService } from '../services/homeService';
+import { quadrasService } from '../services/quadrasService';
 
-const brandName = 'Playero';
-const logoSrc = '/images/logo-text.png';
-const footerTagline = '';
-const footerLegal = '';
+const brandName = ref('Playero');
+const logoSrc = ref('/images/logo-text.png');
+const footerTagline = ref('');
+const footerLegal = ref('');
 
 const reservaBase = (import.meta.env.VITE_RESERVA_URL ?? '/reservar').trim();
-
-// TODO (FUTURO):
-// Substituir dados locais por fetch de /api/v1/home
-// mantendo exatamente a mesma estrutura de dados
 
 const hero = ref({
   title: 'Reserva, joga, desfruta.',
@@ -255,16 +253,16 @@ const servicos = ref([
 const heroCtaLabel = 'Reservar quadra';
 const heroCtaHref = reservaBase;
 
-const quadrasTitle = 'Reserve seu hor\u00e1rio';
-const quadrasSubtitle = '';
-const quadrasCtaLabel = '';
-const quadrasCtaHref = reservaBase;
+const quadrasTitle = ref('Reserve seu hor\u00e1rio');
+const quadrasSubtitle = ref('');
+const quadrasCtaLabel = ref('');
+const quadrasCtaHref = ref(reservaBase);
 
-const experiencesTitle = 'Experi\u00eancias';
-const experiencesSubtitle = '';
+const experiencesTitle = ref('Experi\u00eancias');
+const experiencesSubtitle = ref('');
 
-const servicesTitle = 'Servi\u00e7os & Conviv\u00eancia';
-const servicesSubtitle = '';
+const servicesTitle = ref('Servi\u00e7os & Conviv\u00eancia');
+const servicesSubtitle = ref('');
 
 const location = ref({
   title: 'Localiza\u00e7\u00e3o',
@@ -277,24 +275,124 @@ const location = ref({
     'https://www.google.com/maps/search/?api=1&query=Rua%20General%20Osorio,%20103%20-%20Centro%20-%20Sapiranga',
 });
 
-const mapEmbedUrl =
-  'https://www.google.com/maps?q=Rua%20General%20Osorio,%20103%20-%20Centro%20-%20Sapiranga&output=embed';
+const mapEmbedUrl = ref(
+  'https://www.google.com/maps?q=Rua%20General%20Osorio,%20103%20-%20Centro%20-%20Sapiranga&output=embed'
+);
+
+const applySectionText = (section, fallback) => {
+  if (!section || typeof section !== 'object') {
+    return fallback;
+  }
+  return {
+    title: section.title ?? fallback.title,
+    subtitle: section.subtitle ?? fallback.subtitle,
+    ctaLabel: section.ctaLabel ?? section.cta_label ?? fallback.ctaLabel,
+    ctaHref: section.ctaHref ?? section.cta_href ?? fallback.ctaHref,
+  };
+};
+
+const loadHomeContent = async () => {
+  try {
+    const payload = await homeService.getHome();
+    const content = payload?.data ?? payload;
+    if (!content || typeof content !== 'object') {
+      return;
+    }
+
+    if (content.brand?.name) {
+      brandName.value = content.brand.name;
+    }
+    if (content.brand?.logo) {
+      logoSrc.value = content.brand.logo;
+    }
+
+    if (content.hero && typeof content.hero === 'object') {
+      hero.value = {
+        title: content.hero.title ?? hero.value.title,
+        subtitle: content.hero.subtitle ?? hero.value.subtitle,
+        image: content.hero.image ?? content.hero.image_url ?? hero.value.image,
+      };
+    }
+
+    if (Array.isArray(content.experiencias)) {
+      experiencias.value = content.experiencias;
+    }
+
+    if (Array.isArray(content.servicos)) {
+      servicos.value = content.servicos;
+    }
+
+    if (content.localizacao && typeof content.localizacao === 'object') {
+      location.value = { ...location.value, ...content.localizacao };
+    }
+
+    if (content.mapEmbedUrl) {
+      mapEmbedUrl.value = content.mapEmbedUrl;
+    }
+
+    if (content.quadras && typeof content.quadras === 'object') {
+      const quadrasSection = applySectionText(content.quadras, {
+        title: quadrasTitle.value,
+        subtitle: quadrasSubtitle.value,
+        ctaLabel: quadrasCtaLabel.value,
+        ctaHref: quadrasCtaHref.value,
+      });
+      quadrasTitle.value = quadrasSection.title;
+      quadrasSubtitle.value = quadrasSection.subtitle;
+      quadrasCtaLabel.value = quadrasSection.ctaLabel;
+      quadrasCtaHref.value = quadrasSection.ctaHref;
+    }
+
+    if (content.experiencias_section && typeof content.experiencias_section === 'object') {
+      const experiencesSection = applySectionText(content.experiencias_section, {
+        title: experiencesTitle.value,
+        subtitle: experiencesSubtitle.value,
+      });
+      experiencesTitle.value = experiencesSection.title;
+      experiencesSubtitle.value = experiencesSection.subtitle;
+    }
+
+    if (content.servicos_section && typeof content.servicos_section === 'object') {
+      const servicesSection = applySectionText(content.servicos_section, {
+        title: servicesTitle.value,
+        subtitle: servicesSubtitle.value,
+      });
+      servicesTitle.value = servicesSection.title;
+      servicesSubtitle.value = servicesSection.subtitle;
+    }
+  } catch {
+    // Keep fallback content on failure.
+  }
+};
+
+const loadQuadras = async () => {
+  try {
+    quadras.value = await quadrasService.listQuadras();
+  } catch {
+    // Keep fallback content on failure.
+  }
+};
+
+onMounted(() => {
+  loadHomeContent();
+  loadQuadras();
+});
 
 const quadraCards = computed(() =>
   quadras.value.map((quadra) => ({
     id: quadra.id,
-    name: quadra.nome,
-    description: quadra.texto,
-    imageUrl: quadra.image,
+    name: quadra.name ?? quadra.nome,
+    description: quadra.description ?? quadra.texto,
+    imageUrl: quadra.imageUrl ?? quadra.image,
     href: `${reservaBase}?quadra=${quadra.id}`,
-    badgeLabel: quadra.nome,
+    badgeLabel: quadra.name ?? quadra.nome,
   }))
 );
 
 const navLinks = computed(() => [
-  { label: quadrasTitle, href: '#quadras' },
-  { label: experiencesTitle, href: '#experiencias' },
-  { label: servicesTitle, href: '#servicos' },
+  { label: quadrasTitle.value, href: '#quadras' },
+  { label: experiencesTitle.value, href: '#experiencias' },
+  { label: servicesTitle.value, href: '#servicos' },
   { label: location.value.title, href: '#localizacao' },
 ]);
 </script>

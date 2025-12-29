@@ -5,14 +5,7 @@
       :general-items="generalItems"
       :support-items="supportItems"
       :quick-action="quickAction"
-    />
-
-    <Topbar
-      :title="topbar.title"
-      :subtitle="topbar.subtitle"
-      :search-placeholder="topbar.searchPlaceholder"
-      :user="topbar.user"
-      :show-theme-toggle="topbar.showThemeToggle"
+      :user="sidebarUser"
     />
 
     <main class="dashboard-main">
@@ -99,8 +92,8 @@
 </template>
 
 <script setup>
+import { computed, onMounted, ref } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
-import Topbar from '../components/Topbar.vue';
 import KPI from '../components/KPI.vue';
 import SectionHeader from '../components/SectionHeader.vue';
 import QuadraCard from '../components/QuadraCard.vue';
@@ -108,21 +101,32 @@ import EventoCard from '../components/EventoCard.vue';
 import AcoesRapidas from '../components/AcoesRapidas.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
+import { useAuth } from '../stores/auth';
+import { adminDashboardService } from '../services/adminDashboardService';
+import { quadrasService } from '../services/quadrasService';
 
-const brand = {
+const auth = useAuth();
+const userRole = 'super_admin';
+const isSuperAdmin = computed(() => userRole === 'super_admin');
+
+const brand = computed(() => ({
   name: 'Playero',
-  role: 'Admin Geral',
-};
+  role: auth.user.value?.role ?? auth.user.value?.perfil ?? auth.user.value?.tipo ?? 'Admin Geral',
+}));
 
-const generalItems = [
+const baseGeneralItems = [
   { label: 'Dashboard', icon: 'dashboard', href: '#', active: true },
-  { label: 'Clientes', icon: 'users', href: '#' },
-  { label: 'Quadras', icon: 'grid', href: '#' },
-  { label: 'Reservas', icon: 'calendar-check', href: '#' },
-  { label: 'Administradores', icon: 'shield', href: '#' },
-  { label: 'CAgenda', icon: 'calendar', href: '#' },
+  { label: 'Clientes', icon: 'users', href: '/admin/clientes' },
+  { label: 'Quadras', icon: 'grid', href: '/admin/quadras' },
+  { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas' },
+  { label: 'Administradores', icon: 'shield', href: '/admin/administradores' },
+  { label: 'Agenda', icon: 'calendar', href: '/admin/agenda' },
   { label: 'Eventos', icon: 'sparkle', href: '#' },
 ];
+
+const generalItems = computed(() =>
+  baseGeneralItems.filter((item) => item.label !== 'Administradores' || isSuperAdmin.value),
+);
 
 const supportItems = [{ label: 'Configurações', icon: 'settings', href: '#' }];
 
@@ -133,102 +137,45 @@ const quickAction = {
   href: '#',
 };
 
-const topbar = {
-  title: 'Dashboard',
-  subtitle: 'Visão geral do centro • quadras, reservas e eventos',
-  searchPlaceholder: 'Buscar quadra, esporte, status...',
-  user: {
-    name: 'Admin',
-    role: 'Geral',
-  },
-  showThemeToggle: false,
-};
+const sidebarUser = computed(() => {
+  const user = auth.user.value || {};
+  return {
+    name: user.name ?? user.nome ?? 'Admin',
+    role: user.role ?? user.perfil ?? user.tipo ?? 'Geral',
+  };
+});
 
-const kpis = [
+const defaultKpis = [
   {
     title: 'Quadras livres agora',
-    value: 3,
+    value: 0,
     meta: 'Prontas para reservar',
     icon: 'grid',
   },
   {
     title: 'Quadras sem reservas',
-    value: 2,
+    value: 0,
     meta: 'Sem agenda futura',
     icon: 'calendar',
   },
   {
     title: 'Reservas em andamento',
-    value: 2,
+    value: 0,
     meta: 'Status: hoje',
     icon: 'clipboard',
   },
 ];
 
-const quadras = [
-  {
-    id: 1,
-    name: 'Quadra 01',
-    subtitle: 'Beach Tennis',
-    status: 'Livre',
-    nextReservation: 'Sem reservas',
-    secondaryActionLabel: 'Ver detalhes',
-    primaryActionLabel: 'Reservar',
-  },
-  {
-    id: 2,
-    name: 'Quadra 02',
-    subtitle: 'Beach Tennis',
-    status: 'Reservada',
-    nextReservation: 'Hoje 18:00',
-    secondaryActionLabel: 'Ver detalhes',
-    primaryActionLabel: 'Reservar',
-  },
-  {
-    id: 3,
-    name: 'Quadra 03',
-    subtitle: 'Vôlei',
-    status: 'Livre',
-    nextReservation: 'Sem reservas',
-    secondaryActionLabel: 'Ver detalhes',
-    primaryActionLabel: 'Reservar',
-  },
-  {
-    id: 4,
-    name: 'Quadra 04',
-    subtitle: 'Footvolley',
-    status: 'Manutenção',
-    nextReservation: 'Retorno 16:30',
-    secondaryActionLabel: 'Ver detalhes',
-    primaryActionLabel: 'Reservar',
-  },
-  {
-    id: 5,
-    name: 'Quadra 05',
-    subtitle: 'Beach Tennis',
-    status: 'Livre',
-    nextReservation: 'Hoje 20:00',
-    secondaryActionLabel: 'Ver detalhes',
-    primaryActionLabel: 'Reservar',
-  },
-  {
-    id: 6,
-    name: 'Quadra 06',
-    subtitle: 'Vôlei',
-    status: 'Reservada',
-    nextReservation: 'Hoje 19:00',
-    secondaryActionLabel: 'Ver detalhes',
-    primaryActionLabel: 'Reservar',
-  },
-];
+const kpis = ref([...defaultKpis]);
+const quadras = ref([]);
 
 const eventos = [
   {
     id: 1,
-    title: 'Festa de Aniversário (Kids)',
+    title: 'Festa de Anivers?rio (Kids)',
     attendees: 28,
-    meta: 'Aniversário • Sáb, 10/02 • 16:00 - 19:00',
-    location: 'Área Kids + Bar',
+    meta: 'Anivers?rio ?S?b, 10/02 ?16:00 - 19:00',
+    location: '?rea Kids + Bar',
     secondaryActionLabel: 'Gerenciar',
     primaryActionLabel: 'Ver lista',
   },
@@ -236,16 +183,16 @@ const eventos = [
     id: 2,
     title: 'Happy Hour Corporativo (VIP)',
     attendees: 42,
-    meta: 'Festa da Empresa • Qui, 15/02 • 19:30 - 23:00',
+    meta: 'Festa da Empresa ?Qui, 15/02 ?19:30 - 23:00',
     location: 'Chillout + VIP',
     secondaryActionLabel: 'Gerenciar',
     primaryActionLabel: 'Ver lista',
   },
   {
     id: 3,
-    title: 'Torneio Relâmpago Beach Tennis',
+    title: 'Torneio Rel?mpago Beach Tennis',
     attendees: 64,
-    meta: 'Torneio • Dom, 18/02 • 09:00 - 13:00',
+    meta: 'Torneio ?Dom, 18/02 ?09:00 - 13:00',
     location: 'Quadras 01-03',
     secondaryActionLabel: 'Gerenciar',
     primaryActionLabel: 'Ver lista',
@@ -263,8 +210,8 @@ const infoCards = [
   {
     id: 2,
     label: 'Alertas',
-    headline: '1 quadra em manutenção',
-    text: 'Verificar rede, iluminação e areia.',
+    headline: '1 quadra em manuten??o',
+    text: 'Verificar rede, ilumina??o e areia.',
     details: [],
   },
   {
@@ -272,7 +219,7 @@ const infoCards = [
     label: 'Financeiro',
     headline: 'Resumo do dia (mock)',
     text: 'Receita prevista: R$ 3.420',
-    details: ['Ticket médio: R$ 68'],
+    details: ['Ticket m?dio: R$ 68'],
   },
   {
     id: 4,
@@ -288,17 +235,118 @@ const acoesRapidas = [
   { label: 'Criar reserva', icon: 'calendar-plus', href: '#' },
   { label: 'Adicionar quadra', icon: 'grid-plus', href: '#' },
   { label: 'Novo administrador', icon: 'shield', href: '#' },
-  { label: 'Bloquear horário', icon: 'ban', href: '#' },
+  { label: 'Bloquear hor?rio', icon: 'ban', href: '#' },
   { label: 'Criar evento', icon: 'sparkle', href: '#' },
 ];
 
 const mobileNav = [
   { label: 'Dashboard', icon: 'dashboard', href: '#', active: true },
-  { label: 'Quadras', icon: 'grid', href: '#' },
-  { label: 'Reservas', icon: 'calendar-check', href: '#' },
+  { label: 'Quadras', icon: 'grid', href: '/admin/quadras' },
+  { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas' },
   { label: 'Eventos', icon: 'sparkle', href: '#' },
   { label: 'Perfil', icon: 'user', href: '#' },
 ];
+
+const resolveKpis = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+
+  if (Array.isArray(data?.kpis)) {
+    return data.kpis.map((item, index) => ({
+      title: item?.title ?? defaultKpis[index]?.title ?? '',
+      value: item?.value ?? item?.count ?? item?.total ?? defaultKpis[index]?.value ?? 0,
+      meta: item?.meta ?? item?.label ?? defaultKpis[index]?.meta ?? '',
+      icon: item?.icon ?? defaultKpis[index]?.icon ?? 'grid',
+    }));
+  }
+
+  const metrics = data?.metrics ?? data;
+  return [
+    {
+      ...defaultKpis[0],
+      value:
+        metrics?.quadras_livres ??
+        metrics?.quadrasLivres ??
+        metrics?.quadras_disponiveis ??
+        metrics?.livres ??
+        defaultKpis[0].value,
+    },
+    {
+      ...defaultKpis[1],
+      value:
+        metrics?.quadras_sem_reserva ??
+        metrics?.quadrasSemReserva ??
+        metrics?.sem_reservas ??
+        defaultKpis[1].value,
+    },
+    {
+      ...defaultKpis[2],
+      value:
+        metrics?.reservas_ativas ??
+        metrics?.reservasAndamento ??
+        metrics?.reservas_em_andamento ??
+        defaultKpis[2].value,
+    },
+  ];
+};
+
+const resolveQuadraStatus = (quadra) => {
+  const rawStatus = quadra?.status ?? quadra?.raw?.status;
+  if (rawStatus) {
+    return String(rawStatus);
+  }
+  if (quadra?.raw?.ativa === false || quadra?.raw?.ativo === false) {
+    return 'Manutencao';
+  }
+  return 'Livre';
+};
+
+const normalizeAdminQuadras = (items) =>
+  items.map((quadra) => ({
+    id: quadra.id,
+    name: quadra.name,
+    subtitle: quadra.type,
+    status: resolveQuadraStatus(quadra),
+    nextReservation:
+      quadra.raw?.proxima_reserva ?? quadra.raw?.next_reservation ?? 'Sem reservas',
+    secondaryActionLabel: 'Ver detalhes',
+    primaryActionLabel: 'Reservar',
+  }));
+
+const handleForbidden = (error, fallback) => {
+  if (error?.response?.status !== 403) {
+    return false;
+  }
+  if (typeof window !== 'undefined') {
+    window.alert(error?.normalized?.message || fallback);
+  }
+  return true;
+};
+
+const loadDashboard = async () => {
+  try {
+    const payload = await adminDashboardService.getDashboard();
+    const normalized = resolveKpis(payload);
+    if (normalized.length) {
+      kpis.value = normalized;
+    }
+  } catch (error) {
+    handleForbidden(error, 'Sem permissao para acessar o dashboard.');
+  }
+};
+
+const loadQuadras = async () => {
+  try {
+    const items = await quadrasService.listQuadras({ includeInactive: true });
+    quadras.value = normalizeAdminQuadras(items);
+  } catch (error) {
+    handleForbidden(error, 'Sem permissao para listar quadras.');
+  }
+};
+
+onMounted(() => {
+  loadDashboard();
+  loadQuadras();
+});
 </script>
 
 <style scoped>
@@ -333,7 +381,7 @@ const mobileNav = [
 
 .dashboard-main {
   margin-left: var(--dash-sidebar-width);
-  padding-top: calc(var(--dash-topbar-height) + 24px);
+  padding-top: 32px;
   padding-bottom: 40px;
   min-height: 100vh;
 }
@@ -350,7 +398,7 @@ const mobileNav = [
 .dashboard-kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .dashboard-section {
@@ -477,7 +525,7 @@ const mobileNav = [
 @media (max-width: 1024px) {
   .dashboard-main {
     margin-left: 0;
-    padding-top: 150px;
+    padding-top: 24px;
   }
 
   .dashboard-content {
@@ -487,7 +535,7 @@ const mobileNav = [
 
 @media (max-width: 768px) {
   .dashboard-main {
-    padding-top: 180px;
+    padding-top: 24px;
     padding-bottom: calc(var(--dash-mobile-nav-height) + 32px);
   }
 
