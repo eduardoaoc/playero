@@ -4,13 +4,35 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --app-bg: #0f0f12;
+  --app-surface: #1a1a1f;
+  --app-surface-soft: #141418;
+  --app-surface-strong: #202029;
+  --app-border: #262631;
+  --app-text: #ffffff;
+  --app-muted: #b5b5b5;
+  --app-muted-strong: #8b8b97;
+  --app-accent: #ff7a00;
+  --app-accent-strong: #ff8f26;
+  --app-accent-soft: rgba(255, 122, 0, 0.18);
+  --app-success: #16a34a;
+  --app-success-soft: rgba(22, 163, 74, 0.18);
+  --app-warning: #f59e0b;
+  --app-warning-soft: rgba(245, 158, 11, 0.18);
+  --app-danger: #ef4444;
+  --app-danger-soft: rgba(239, 68, 68, 0.18);
+  --app-shadow: 0 20px 60px -40px rgba(0, 0, 0, 0.8);
+  --app-shadow-soft: 0 18px 50px -35px rgba(0, 0, 0, 0.7);
+}
+
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  background-color: #0f0f12;
-  color: #ffffff;
+  background-color: var(--app-bg);
+  color: var(--app-text);
   font-family: 'Sora', 'Space Grotesk', system-ui, sans-serif;
 }
 

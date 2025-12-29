@@ -482,6 +482,26 @@ const handleSubmit = async () => {
   background: linear-gradient(180deg, rgba(255, 122, 0, 0.7), rgba(255, 122, 0, 0.35));
 }
 
+@media (min-width: 1024px) {
+  .login-shell {
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .login-shell::-webkit-scrollbar {
+    width: 0;
+  }
+
+  .login-card {
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .login-card::-webkit-scrollbar {
+    width: 0;
+  }
+}
+
 .login-grid {
   gap: 1.5rem;
   padding: 1.5rem;
@@ -592,6 +612,7 @@ const handleSubmit = async () => {
     width: 460px;
     max-width: 460px;
     min-width: 460px;
+    margin-left: 0.75rem;
     margin-bottom: 1.35rem;
     padding: 2.2rem 2.2rem 2.75rem;
   }
