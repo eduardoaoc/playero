@@ -219,9 +219,19 @@
                   <h3 class="table-title">Calendario mensal</h3>
                   <p class="table-subtitle">Distribuicao de reservas por dia.</p>
                 </div>
+                <label class="calendar-filter">
+                  <span>Filtrar por mes</span>
+                  <input v-model="calendarMonthFilter" type="month" :max="calendarMonthMax" />
+                </label>
               </div>
 
-              <CalendarioReservas :reservas="reservas" :month="currentMonth" :year="currentYear" />
+              <CalendarioReservas
+                v-model:monthFilter="calendarMonthFilter"
+                :reservas="reservas"
+                :month="currentMonth"
+                :year="currentYear"
+                :show-filter="false"
+              />
             </div>
           </template>
         </section>
@@ -412,6 +422,14 @@ const now = new Date();
 const currentYear = now.getFullYear();
 const currentMonth = now.getMonth();
 const useMock = true;
+
+const formatMonthFilter = (year, monthIndex) =>
+  `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+const calendarMonthFilter = ref(formatMonthFilter(currentYear, currentMonth));
+const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+const maxFutureDate = new Date(todayStart);
+maxFutureDate.setFullYear(todayStart.getFullYear() + 1);
+const calendarMonthMax = formatMonthFilter(maxFutureDate.getFullYear(), maxFutureDate.getMonth());
 
 const reservas = ref([]);
 const loading = ref(false);
@@ -1107,6 +1125,31 @@ watch(
   margin: 4px 0 0;
   font-size: 0.9rem;
   color: var(--dash-muted, #64748b);
+}
+
+.calendar-header {
+  align-items: flex-start;
+}
+
+.calendar-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dash-muted, #64748b);
+  font-weight: 700;
+}
+
+.calendar-filter input {
+  border-radius: 12px;
+  border: 1px solid var(--dash-border, #e6e9ef);
+  background: var(--dash-surface-soft, #f6f8fb);
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: var(--dash-text, #0f172a);
+  font-weight: 600;
 }
 
 .table-legend {

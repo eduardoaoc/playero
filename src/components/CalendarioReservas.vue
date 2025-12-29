@@ -1,9 +1,9 @@
 <template>
   <div class="calendar-wrap">
-    <div class="calendar-toolbar">
+    <div v-if="showFilter" class="calendar-toolbar">
       <label class="calendar-filter">
         <span>Filtrar por mes</span>
-        <input v-model="monthFilter" type="month" :max="monthFilterMax" />
+        <input v-model="monthFilterValue" type="month" :max="monthFilterMax" />
       </label>
     </div>
 
@@ -100,7 +100,16 @@ const props = defineProps({
     type: Number,
     default: undefined,
   },
+  monthFilter: {
+    type: String,
+    default: undefined,
+  },
+  showFilter: {
+    type: Boolean,
+    default: true,
+  },
 });
+const emit = defineEmits(['update:monthFilter']);
 
 const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 const maxPreviewItems = 3;
@@ -119,7 +128,17 @@ const displayMonth = ref(initialMonth);
 const formatMonthValue = (year, monthIndex) =>
   `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
 
-const monthFilter = ref(formatMonthValue(displayYear.value, displayMonth.value));
+const internalMonthFilter = ref(formatMonthValue(displayYear.value, displayMonth.value));
+const monthFilterValue = computed({
+  get: () => (props.monthFilter !== undefined ? props.monthFilter : internalMonthFilter.value),
+  set: (value) => {
+    if (props.monthFilter !== undefined) {
+      emit('update:monthFilter', value);
+      return;
+    }
+    internalMonthFilter.value = value;
+  },
+});
 const monthFilterMax = computed(() =>
   formatMonthValue(maxFutureDate.getFullYear(), maxFutureDate.getMonth()),
 );
@@ -238,12 +257,12 @@ const closeDayModal = () => {
 watch(
   () => [displayYear.value, displayMonth.value],
   () => {
-    monthFilter.value = formatMonthValue(displayYear.value, displayMonth.value);
+    monthFilterValue.value = formatMonthValue(displayYear.value, displayMonth.value);
   },
 );
 
 watch(
-  () => monthFilter.value,
+  () => monthFilterValue.value,
   (value) => {
     if (!value) {
       return;

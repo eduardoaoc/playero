@@ -2,7 +2,13 @@
   <div class="acoes-card">
     <h3 class="acoes-title">{{ title }}</h3>
     <div class="acoes-list">
-      <a v-for="item in items" :key="item.label" :href="item.href" class="acoes-item">
+      <a
+        v-for="item in items"
+        :key="item.label"
+        :href="item.href || '#'"
+        class="acoes-item"
+        @click="handleAction(item, $event)"
+      >
         <span class="acoes-icon">
           <DashboardIcon :name="item.icon" />
         </span>
@@ -17,6 +23,13 @@
 
 <script setup>
 import DashboardIcon from './DashboardIcon.vue';
+
+const handleAction = (item, event) => {
+  if (typeof item?.action === 'function') {
+    event.preventDefault();
+    item.action();
+  }
+};
 
 defineProps({
   title: {

@@ -21,7 +21,12 @@
                 <DashboardIcon name="filter" />
                 Filtrar
               </button>
-              <button class="dash-action dash-action--primary" type="button">
+              <button
+                v-if="canManageQuadras"
+                class="dash-action dash-action--primary"
+                type="button"
+                @click="openNovaQuadra"
+              >
                 <DashboardIcon name="plus" />
                 Nova Quadra
               </button>
@@ -62,7 +67,9 @@
               :location="evento.location"
               :attendees="evento.attendees"
               :primary-action-label="evento.primaryActionLabel"
+              :primary-action-href="evento.primaryActionHref"
               :secondary-action-label="evento.secondaryActionLabel"
+              :secondary-action-href="evento.secondaryActionHref"
             />
           </div>
         </section>
@@ -87,6 +94,13 @@
       </div>
     </main>
 
+    <NovaQuadraModal
+      v-if="canManageQuadras"
+      :open="isNovaQuadraOpen"
+      @close="closeNovaQuadra"
+      @created="handleQuadraCreated"
+    />
+
     <MobileNav :items="mobileNav" />
   </div>
 </template>
@@ -101,6 +115,7 @@ import EventoCard from '../components/EventoCard.vue';
 import AcoesRapidas from '../components/AcoesRapidas.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
+import NovaQuadraModal from '../components/modals/NovaQuadraModal.vue';
 import { useAuth } from '../stores/auth';
 import { adminDashboardService } from '../services/adminDashboardService';
 import { quadrasService } from '../services/quadrasService';
@@ -108,6 +123,9 @@ import { quadrasService } from '../services/quadrasService';
 const auth = useAuth();
 const userRole = 'super_admin';
 const isSuperAdmin = computed(() => userRole === 'super_admin');
+const canManageQuadras = computed(() =>
+  ['admin', 'super_admin'].includes(userRole.toLowerCase()),
+);
 
 const brand = computed(() => ({
   name: 'Playero',
@@ -169,35 +187,7 @@ const defaultKpis = [
 const kpis = ref([...defaultKpis]);
 const quadras = ref([]);
 
-const eventos = [
-  {
-    id: 1,
-    title: 'Festa de Anivers?rio (Kids)',
-    attendees: 28,
-    meta: 'Anivers?rio ?S?b, 10/02 ?16:00 - 19:00',
-    location: '?rea Kids + Bar',
-    secondaryActionLabel: 'Gerenciar',
-    primaryActionLabel: 'Ver lista',
-  },
-  {
-    id: 2,
-    title: 'Happy Hour Corporativo (VIP)',
-    attendees: 42,
-    meta: 'Festa da Empresa ?Qui, 15/02 ?19:30 - 23:00',
-    location: 'Chillout + VIP',
-    secondaryActionLabel: 'Gerenciar',
-    primaryActionLabel: 'Ver lista',
-  },
-  {
-    id: 3,
-    title: 'Torneio Rel?mpago Beach Tennis',
-    attendees: 64,
-    meta: 'Torneio ?Dom, 18/02 ?09:00 - 13:00',
-    location: 'Quadras 01-03',
-    secondaryActionLabel: 'Gerenciar',
-    primaryActionLabel: 'Ver lista',
-  },
-];
+const eventos = ref([]);
 
 const infoCards = [
   {
@@ -230,14 +220,47 @@ const infoCards = [
   },
 ];
 
-const acoesRapidas = [
-  { label: 'Criar cliente', icon: 'user-plus', href: '#' },
-  { label: 'Criar reserva', icon: 'calendar-plus', href: '#' },
-  { label: 'Adicionar quadra', icon: 'grid-plus', href: '#' },
-  { label: 'Novo administrador', icon: 'shield', href: '#' },
-  { label: 'Bloquear hor?rio', icon: 'ban', href: '#' },
-  { label: 'Criar evento', icon: 'sparkle', href: '#' },
-];
+const isNovaQuadraOpen = ref(false);
+
+const openNovaQuadra = () => {
+  if (!canManageQuadras.value) {
+    return;
+  }
+  isNovaQuadraOpen.value = true;
+};
+
+const closeNovaQuadra = () => {
+  isNovaQuadraOpen.value = false;
+};
+
+const handleQuadraCreated = (payload) => {
+  const [created] = normalizeAdminQuadras([
+    {
+      id: Date.now(),
+      name: payload?.nome,
+      type: payload?.esporte,
+      status: payload?.status,
+      raw: payload,
+    },
+  ]);
+
+  if (created) {
+    quadras.value = [created, ...quadras.value];
+  }
+};
+
+const acoesRapidas = computed(() => [
+  { label: 'Criar cliente', icon: 'user-plus', href: '/admin/clientes' },
+  { label: 'Criar reserva', icon: 'calendar-plus', href: '/admin/reservas' },
+  {
+    label: 'Adicionar quadra',
+    icon: 'grid-plus',
+    action: canManageQuadras.value ? openNovaQuadra : null,
+    href: canManageQuadras.value ? '#' : '/admin/quadras',
+  },
+  { label: 'Novo administrador', icon: 'shield', href: '/admin/administradores' },
+  { label: 'Bloquear hor?rio', icon: 'ban', href: '/admin/agenda' },
+]);
 
 const mobileNav = [
   { label: 'Dashboard', icon: 'dashboard', href: '#', active: true },
@@ -312,6 +335,66 @@ const normalizeAdminQuadras = (items) =>
     primaryActionLabel: 'Reservar',
   }));
 
+const normalizeEvento = (evento, index) => {
+  if (!evento) {
+    return null;
+  }
+  const title = evento.title ?? evento.nome ?? evento.name;
+  if (!title) {
+    return null;
+  }
+
+  const primaryActionHref =
+    evento.primaryActionHref ??
+    evento.primary_action_href ??
+    evento.list_url ??
+    evento.lista_url ??
+    '';
+  const secondaryActionHref =
+    evento.secondaryActionHref ??
+    evento.secondary_action_href ??
+    evento.manage_url ??
+    evento.gerenciar_url ??
+    '';
+
+  return {
+    id: evento.id ?? evento.uuid ?? index,
+    title,
+    attendees: evento.attendees ?? evento.inscritos ?? evento.participantes ?? 0,
+    meta:
+      evento.meta ??
+      evento.data ??
+      evento.data_evento ??
+      evento.dataEvento ??
+      evento.data_formatada ??
+      '',
+    location: evento.location ?? evento.local ?? evento.endereco ?? evento.espaco ?? '',
+    primaryActionLabel:
+      evento.primaryActionLabel ?? (primaryActionHref ? 'Ver lista' : ''),
+    primaryActionHref: primaryActionHref || '#',
+    secondaryActionLabel:
+      evento.secondaryActionLabel ?? (secondaryActionHref ? 'Gerenciar' : ''),
+    secondaryActionHref: secondaryActionHref || '#',
+  };
+};
+
+const resolveEventos = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+  const items =
+    data?.eventos ??
+    data?.events ??
+    data?.eventos_criados ??
+    data?.data?.eventos ??
+    data?.data?.events ??
+    [];
+
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.map(normalizeEvento).filter(Boolean);
+};
+
 const handleForbidden = (error, fallback) => {
   if (error?.response?.status !== 403) {
     return false;
@@ -329,6 +412,7 @@ const loadDashboard = async () => {
     if (normalized.length) {
       kpis.value = normalized;
     }
+    eventos.value = resolveEventos(payload);
   } catch (error) {
     handleForbidden(error, 'Sem permissao para acessar o dashboard.');
   }
