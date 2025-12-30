@@ -14,10 +14,10 @@
           <tr>
             <th>Quadra</th>
             <th>Data</th>
-            <th>Hora inicio</th>
+            <th>Hora in&#237;cio</th>
             <th>Hora fim</th>
             <th>Motivo</th>
-            <th>Acoes</th>
+            <th>A&#231;&#245;es</th>
           </tr>
         </thead>
         <tbody>

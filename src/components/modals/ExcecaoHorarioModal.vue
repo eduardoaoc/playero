@@ -40,7 +40,7 @@
         </div>
 
         <p v-if="showTimeError" class="form-error">
-          Informe horario de abertura e fechamento ou marque como fechado.
+          Informe hor&#225;rio de abertura e fechamento ou marque como fechado.
         </p>
 
         <div class="modal-actions">
@@ -92,9 +92,15 @@ const form = reactive({
 
 const isSubmitted = ref(false);
 const isEditMode = computed(() => props.mode === 'edit');
-const eyebrowLabel = computed(() => (isEditMode.value ? 'Excecao de horario' : 'Excecao de horario'));
-const titleLabel = computed(() => (isEditMode.value ? 'Editar excecao' : 'Adicionar excecao'));
-const submitLabel = computed(() => (isEditMode.value ? 'Atualizar excecao' : 'Salvar excecao'));
+const eyebrowLabel = computed(() =>
+  isEditMode.value ? 'Exce\u00e7\u00e3o de hor\u00e1rio' : 'Exce\u00e7\u00e3o de hor\u00e1rio',
+);
+const titleLabel = computed(() =>
+  isEditMode.value ? 'Editar exce\u00e7\u00e3o' : 'Adicionar exce\u00e7\u00e3o',
+);
+const submitLabel = computed(() =>
+  isEditMode.value ? 'Atualizar exce\u00e7\u00e3o' : 'Salvar exce\u00e7\u00e3o',
+);
 
 const showDateError = computed(() => isSubmitted.value && !form.data);
 const showTimeError = computed(() => {

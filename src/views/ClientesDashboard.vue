@@ -12,7 +12,7 @@
       <div class="dashboard-content">
         <section class="dashboard-section">
           <SectionHeader
-            title="Gestao de clientes"
+            title="Gest&#227;o de clientes"
             subtitle="Acompanhe contas, reservas e status em tempo real."
           >
             <template #actions>
@@ -20,7 +20,12 @@
                 <DashboardIcon name="filter" />
                 Exportar lista
               </button>
-              <button v-if="isSuperAdmin" class="dash-action dash-action--primary" type="button">
+              <button
+                v-if="isSuperAdmin"
+                class="dash-action dash-action--primary"
+                type="button"
+                @click="openCreateClient"
+              >
                 <DashboardIcon name="user-plus" />
                 Novo cliente
               </button>
@@ -61,7 +66,21 @@
             </div>
           </div>
 
-          <div class="table-card">
+          <EmptyStateCard
+            v-if="!loading && !clients.length"
+            title="Nenhum cliente encontrado"
+            description="Nenhum cliente cadastrado."
+            icon="users"
+          />
+          <EmptyStateCard
+            v-else-if="!loading && !filteredClients.length"
+            title="Nenhum cliente encontrado"
+            description="Nenhum cliente encontrado com os filtros atuais."
+            icon="search"
+            action-label="Limpar filtros"
+            :action-callback="clearFilters"
+          />
+          <div v-else class="table-card">
             <div class="table-header">
               <div>
                 <h3 class="table-title">Todos os clientes</h3>
@@ -89,7 +108,7 @@
                     <th>Contato</th>
                     <th>Reservas</th>
                     <th>Status</th>
-                    <th>Acoes</th>
+                    <th>A&#231;&#245;es</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -170,7 +189,7 @@
                   :disabled="pagination.page === totalPages"
                   @click="changePage(pagination.page + 1)"
                 >
-                  Proximo
+                  Pr&#243;ximo
                 </button>
               </div>
             </div>
@@ -257,6 +276,13 @@
       </div>
     </div>
 
+    <ModalCriarCliente
+      v-if="isSuperAdmin"
+      :open="isCreateClientOpen"
+      @close="closeCreateClient"
+      @created="handleClientCreated"
+    />
+
     <MobileNav :items="mobileNav" />
   </div>
 </template>
@@ -267,6 +293,8 @@ import Sidebar from '../components/Sidebar.vue';
 import SectionHeader from '../components/SectionHeader.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
+import EmptyStateCard from '../components/EmptyStateCard.vue';
+import ModalCriarCliente from '../components/modals/ModalCriarCliente.vue';
 import { useAuth } from '../stores/auth';
 import { clientsService } from '../services/clientsService';
 
@@ -293,10 +321,10 @@ const generalItems = computed(() =>
   baseGeneralItems.filter((item) => item.label !== 'Administradores' || isSuperAdmin.value),
 );
 
-const supportItems = [{ label: 'Configuracoes', icon: 'settings', href: '#' }];
+const supportItems = [{ label: 'Configura\u00e7\u00f5es', icon: 'settings', href: '#' }];
 
 const quickAction = {
-  title: 'Atalho rapido',
+  title: 'Atalho r\u00e1pido',
   description: 'Criar um novo cliente em poucos cliques.',
   buttonLabel: 'Novo cliente',
   href: '#',
@@ -325,6 +353,7 @@ const clients = ref([]);
 const loading = ref(false);
 const selectedClientIds = ref([]);
 const selectedClientId = ref(null);
+const isCreateClientOpen = ref(false);
 
 const normalizeClient = (client) => ({
   id: client.id,
@@ -398,6 +427,34 @@ const changePage = (page) => {
 const clearFilters = () => {
   filters.value = { name: '', email: '', phone: '' };
   pagination.value.page = 1;
+};
+
+const openCreateClient = () => {
+  if (!isSuperAdmin.value) {
+    return;
+  }
+  isCreateClientOpen.value = true;
+};
+
+const closeCreateClient = () => {
+  isCreateClientOpen.value = false;
+};
+
+const handleClientCreated = (payload) => {
+  if (!payload) {
+    return;
+  }
+  const created = normalizeClient({
+    id: Date.now(),
+    nome: payload.nome,
+    email: payload.email,
+    telefone: payload.telefone,
+    status: payload.status,
+    createdAt: new Date().toISOString(),
+    reservasTotal: 0,
+  });
+  clients.value = [created, ...clients.value];
+  closeCreateClient();
 };
 
 const handleViewDetails = (client) => {

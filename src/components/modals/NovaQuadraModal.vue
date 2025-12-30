@@ -23,7 +23,7 @@
             <span>Tipo de esporte</span>
             <select v-model="form.esporte">
               <option value="Beach Tennis">Beach Tennis</option>
-              <option value="Volei">Volei</option>
+              <option value="Volei">V&#244;lei</option>
               <option value="Footvolley">Footvolley</option>
             </select>
           </label>
@@ -32,7 +32,7 @@
             <span>Status inicial</span>
             <select v-model="form.status">
               <option value="LIVRE">LIVRE</option>
-              <option value="MANUTENCAO">MANUTENCAO</option>
+              <option value="MANUTENCAO">MANUTEN&#199;&#195;O</option>
             </select>
           </label>
 
@@ -46,7 +46,7 @@
         </div>
 
         <label class="form-field">
-          <span>Observacoes</span>
+          <span>Observa&#231;&#245;es</span>
           <textarea v-model="form.observacoes" rows="3" placeholder="Opcional"></textarea>
         </label>
 

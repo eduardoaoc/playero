@@ -2,7 +2,7 @@
   <div class="calendar-wrap">
     <div v-if="showFilter" class="calendar-toolbar">
       <label class="calendar-filter">
-        <span>Filtrar por mes</span>
+        <span>Filtrar por m&#234;s</span>
         <input v-model="monthFilterValue" type="month" :max="monthFilterMax" />
       </label>
     </div>

@@ -13,7 +13,7 @@
         <section class="dashboard-section">
           <SectionHeader
             title="Painel administrativo"
-            subtitle="Controle pagamentos, cancelamentos e horarios em um unico lugar."
+            subtitle="Controle pagamentos, cancelamentos e hor&#225;rios em um &#250;nico lugar."
           >
             <template #actions>
               <button class="dash-action dash-action--ghost" type="button">
@@ -37,15 +37,21 @@
               <DashboardIcon name="shield" />
             </div>
             <div>
-              <h3 class="access-title">Area restrita</h3>
+              <h3 class="access-title">&#193;rea restrita</h3>
               <p class="access-text">
-                Apenas perfis admin ou super_admin podem acessar a gestao completa de reservas.
+                Apenas perfis admin ou super_admin podem acessar a gest&#227;o completa de reservas.
               </p>
             </div>
           </div>
 
           <template v-else>
-            <div class="table-card">
+            <EmptyStateCard
+              v-if="!loading && !reservas.length"
+              title="Nenhuma reserva encontrada"
+              description="N&#227;o existem reservas registradas."
+              icon="calendar-check"
+            />
+            <div v-else class="table-card">
               <div class="table-header">
                 <div>
                   <h3 class="table-title">Todas as reservas</h3>
@@ -53,7 +59,7 @@
                 </div>
                 <div class="table-legend">
                   <ReservaStatusBadge status="CONFIRMADA" label="Confirmada" />
-                  <ReservaStatusBadge status="PRE-RESERVA" label="Pre-reserva" />
+                  <ReservaStatusBadge status="PRE-RESERVA" label="Pr&#233;-reserva" />
                   <ReservaStatusBadge status="CANCELADA" label="Cancelada" />
                 </div>
               </div>
@@ -66,11 +72,11 @@
                       <th>Cliente</th>
                       <th>Quadra</th>
                       <th>Data</th>
-                      <th>Horario</th>
+                      <th>Hor&#225;rio</th>
                       <th>Status</th>
                       <th>Pagamento</th>
                       <th>Valor</th>
-                      <th>Acoes</th>
+                      <th>A&#231;&#245;es</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -117,7 +123,7 @@
                     :disabled="pagination.page === totalPages"
                     @click="changePage(pagination.page + 1)"
                   >
-                    Proximo
+                    Pr&#243;ximo
                   </button>
                 </div>
               </div>
@@ -127,8 +133,8 @@
               <div class="actions-summary">
                 <div class="actions-header">
                   <div>
-                    <h3 class="table-title">Acoes administrativas</h3>
-                    <p class="table-subtitle">Resumo rapido do mes atual.</p>
+                    <h3 class="table-title">A&#231;&#245;es administrativas</h3>
+                    <p class="table-subtitle">Resumo r&#225;pido do m&#234;s atual.</p>
                   </div>
                   <div class="actions-controls">
                     <label class="actions-filter">
@@ -136,7 +142,7 @@
                       <select v-model="paymentFilter">
                         <option value="all">Todos</option>
                         <option value="pix">PIX</option>
-                        <option value="cartao">Cartao</option>
+                        <option value="cartao">Cart&#227;o</option>
                       </select>
                     </label>
                     <span class="actions-tag">{{ monthLabel }}</span>
@@ -153,7 +159,7 @@
                     <strong class="metric-value metric-value--success">{{ stats.confirmadas }}</strong>
                   </div>
                   <div class="metric-card">
-                    <span class="metric-label">Pre-reservas</span>
+                      <span class="metric-label">Pr&#233;-reservas</span>
                     <strong class="metric-value metric-value--warning">{{ stats.preReservas }}</strong>
                   </div>
                   <div class="metric-card">
@@ -170,11 +176,11 @@
                 <div class="revenue-chart">
                   <div class="revenue-chart-header">
                     <div>
-                      <h4 class="revenue-title">Grafico de receitas</h4>
-                      <p class="revenue-subtitle">Comparativo mensal por metodo de pagamento.</p>
+                      <h4 class="revenue-title">Gr&#225;fico de receitas</h4>
+                      <p class="revenue-subtitle">Comparativo mensal por m&#233;todo de pagamento.</p>
                     </div>
                     <button class="dash-action dash-action--ghost" type="button">
-                      Ver relatorio
+                      Ver relat&#243;rio
                     </button>
                   </div>
                   <div class="revenue-bars">
@@ -216,11 +222,11 @@
             <div class="calendar-card">
               <div class="calendar-header">
                 <div>
-                  <h3 class="table-title">Calendario mensal</h3>
-                  <p class="table-subtitle">Distribuicao de reservas por dia.</p>
+                  <h3 class="table-title">Calend&#225;rio mensal</h3>
+                  <p class="table-subtitle">Distribui&#231;&#227;o de reservas por dia.</p>
                 </div>
                 <label class="calendar-filter">
-                  <span>Filtrar por mes</span>
+                  <span>Filtrar por m&#234;s</span>
                   <input v-model="calendarMonthFilter" type="month" :max="calendarMonthMax" />
                 </label>
               </div>
@@ -265,7 +271,7 @@
               <input v-model="createForm.data" type="date" />
             </label>
             <label class="modal-field">
-              <span>Horario</span>
+              <span>Hor&#225;rio</span>
               <input v-model="createForm.horario" type="time" />
             </label>
             <label class="modal-field">
@@ -318,7 +324,7 @@
               <strong class="modal-value">{{ selectedReserva.dataLabel }}</strong>
             </div>
             <div class="modal-item">
-              <span class="modal-label">Horario</span>
+              <span class="modal-label">Hor&#225;rio</span>
               <strong class="modal-value">{{ selectedReserva.horario }}</strong>
             </div>
             <div class="modal-item">
@@ -370,6 +376,7 @@ import Sidebar from '../components/Sidebar.vue';
 import SectionHeader from '../components/SectionHeader.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
+import EmptyStateCard from '../components/EmptyStateCard.vue';
 import ReservaRow from '../components/ReservaRow.vue';
 import ReservaStatusBadge from '../components/ReservaStatusBadge.vue';
 import CalendarioReservas from '../components/CalendarioReservas.vue';
@@ -400,10 +407,10 @@ const generalItems = computed(() =>
   baseGeneralItems.filter((item) => item.label !== 'Administradores' || isSuperAdmin.value),
 );
 
-const supportItems = [{ label: 'Configuracoes', icon: 'settings', href: '#' }];
+const supportItems = [{ label: 'Configura\u00e7\u00f5es', icon: 'settings', href: '#' }];
 
 const quickAction = {
-  title: 'Atalho rapido',
+  title: 'Atalho r\u00e1pido',
   description: 'Criar uma nova reserva manualmente.',
   buttonLabel: 'Nova reserva',
   href: '#',
@@ -421,7 +428,7 @@ const sidebarUser = computed(() => {
 const now = new Date();
 const currentYear = now.getFullYear();
 const currentMonth = now.getMonth();
-const useMock = true;
+const useMock = false;
 
 const formatMonthFilter = (year, monthIndex) =>
   `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
@@ -450,10 +457,10 @@ const createForm = ref({
 });
 
 const adminActions = [
-  { id: 'export', label: 'Exportar CSV', helper: 'Relatorio rapido', icon: 'clipboard' },
+  { id: 'export', label: 'Exportar CSV', helper: 'Relat\u00f3rio r\u00e1pido', icon: 'clipboard' },
   { id: 'pix', label: 'Conciliar PIX', helper: 'Pagamentos pendentes', icon: 'calendar-check' },
-  { id: 'bloquear', label: 'Bloquear horario', helper: 'Reserva indisponivel', icon: 'ban' },
-  { id: 'relatorio', label: 'Gerar relatorio', helper: 'Resumo administrativo', icon: 'filter' },
+  { id: 'bloquear', label: 'Bloquear hor\u00e1rio', helper: 'Reserva indispon\u00edvel', icon: 'ban' },
+  { id: 'relatorio', label: 'Gerar relat\u00f3rio', helper: 'Resumo administrativo', icon: 'filter' },
 ];
 
 const chartMonths = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -529,7 +536,7 @@ const normalizeStatus = (status) => {
 };
 
 const statusLabelMap = {
-  'PRE-RESERVA': 'Pre-reserva',
+  'PRE-RESERVA': 'Pr\u00e9-reserva',
   CONFIRMADA: 'Confirmada',
   CANCELADA: 'Cancelada',
 };
@@ -811,7 +818,7 @@ const monthLabel = computed(() => {
       year: 'numeric',
     });
   } catch (error) {
-    return 'Mes atual';
+    return 'M\u00eas atual';
   }
 });
 

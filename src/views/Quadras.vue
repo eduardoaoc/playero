@@ -29,7 +29,13 @@
             </template>
           </SectionHeader>
 
-          <div class="dashboard-quadra-grid">
+          <EmptyStateCard
+            v-if="!isQuadrasLoading && !quadras.length"
+            title="Nenhuma quadra encontrada"
+            description="Nenhuma quadra criada ainda."
+            icon="grid"
+          />
+          <div v-else class="dashboard-quadra-grid">
             <QuadraCard
               v-for="quadra in quadras"
               :key="quadra.id"
@@ -59,14 +65,16 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
 import SectionHeader from '../components/SectionHeader.vue';
 import QuadraCard from '../components/QuadraCard.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
+import EmptyStateCard from '../components/EmptyStateCard.vue';
 import NovaQuadraModal from '../components/modals/NovaQuadraModal.vue';
 import { useAuth } from '../stores/auth';
+import { quadrasService } from '../services/quadrasService';
 
 const auth = useAuth();
 const userRole = 'super_admin';
@@ -94,10 +102,10 @@ const generalItems = computed(() =>
   baseGeneralItems.filter((item) => item.label !== 'Administradores' || isSuperAdmin.value),
 );
 
-const supportItems = [{ label: 'Configuracoes', icon: 'settings', href: '#' }];
+const supportItems = [{ label: 'Configura\u00e7\u00f5es', icon: 'settings', href: '#' }];
 
 const quickAction = {
-  title: 'Atalho rapido',
+  title: 'Atalho r\u00e1pido',
   description: 'Adicionar uma nova quadra em poucos cliques.',
   buttonLabel: 'Nova quadra',
   href: '#',
@@ -111,67 +119,36 @@ const sidebarUser = computed(() => {
   };
 });
 
-const mockQuadras = [
-  {
-    id: 1,
-    name: 'Quadra 01',
-    sport: 'Beach Tennis',
-    status: 'Livre',
-    nextReservation: 'Hoje 18:00',
-  },
-  {
-    id: 2,
-    name: 'Quadra 02',
-    sport: 'Volei',
-    status: 'Reservada',
-    nextReservation: 'Hoje 20:00',
-  },
-  {
-    id: 3,
-    name: 'Quadra 03',
-    sport: 'Footvolley',
-    status: 'Manutencao',
-    nextReservation: 'Sem reservas',
-  },
-  {
-    id: 4,
-    name: 'Quadra 04',
-    sport: 'Beach Tennis',
-    status: 'Livre',
-    nextReservation: 'Hoje 21:30',
-  },
-  {
-    id: 5,
-    name: 'Quadra 05',
-    sport: 'Volei',
-    status: 'Reservada',
-    nextReservation: 'Hoje 22:00',
-  },
-  {
-    id: 6,
-    name: 'Quadra 06',
-    sport: 'Footvolley',
-    status: 'Livre',
-    nextReservation: 'Sem reservas',
-  },
-];
-
 const normalizeQuadra = (quadra, index) => ({
   id: quadra.id ?? quadra.uuid ?? quadra.codigo ?? index,
   name: quadra.name ?? quadra.nome ?? `Quadra ${String(index + 1).padStart(2, '0')}`,
-  subtitle: quadra.sport ?? quadra.esporte ?? quadra.tipo ?? '---',
+  subtitle: quadra.sport ?? quadra.esporte ?? quadra.tipo ?? quadra.type ?? '---',
   status:
     quadra.status ??
-    (quadra.ativa === false || quadra.ativo === false ? 'Manutencao' : 'Livre'),
+    (quadra.ativa === false || quadra.ativo === false ? 'Manuten\u00e7\u00e3o' : 'Livre'),
   nextReservation:
     quadra.nextReservation ?? quadra.proxima_reserva ?? quadra.next_reservation ?? 'Sem reservas',
-  nextReservationLabel: quadra.nextReservationLabel ?? 'Proxima',
+  nextReservationLabel: quadra.nextReservationLabel ?? 'Pr\u00f3xima',
   secondaryActionLabel: 'Ver detalhes',
   primaryActionLabel: 'Reservar',
 });
 
-const quadras = ref(mockQuadras.map(normalizeQuadra));
+const quadras = ref([]);
 const isNovaQuadraOpen = ref(false);
+const isQuadrasLoading = ref(true);
+
+const loadQuadras = async () => {
+  isQuadrasLoading.value = true;
+  try {
+    const payload = await quadrasService.listQuadras({ includeInactive: true });
+    const data = payload?.data ?? payload ?? [];
+    quadras.value = Array.isArray(data) ? data.map(normalizeQuadra) : [];
+  } catch (error) {
+    quadras.value = [];
+  } finally {
+    isQuadrasLoading.value = false;
+  }
+};
 
 const openNovaQuadra = () => {
   if (!canManageQuadras.value) {
@@ -203,6 +180,10 @@ const mobileNav = [
   { label: 'Eventos', icon: 'sparkle', href: '#' },
   { label: 'Perfil', icon: 'user', href: '#' },
 ];
+
+onMounted(() => {
+  loadQuadras();
+});
 </script>
 
 <style scoped>

@@ -2,7 +2,7 @@
   <section class="space-y-4">
     <div>
       <h2 class="text-lg font-semibold text-white">2. Escolha a data</h2>
-      <p class="text-sm text-[#B5B5B5]">Calendario mensal aberto com todos os dias disponiveis e indisponiveis.</p>
+      <p class="text-sm text-[#B5B5B5]">Calend&#225;rio mensal aberto com todos os dias dispon&#237;veis e indispon&#237;veis.</p>
     </div>
 
     <div class="rounded-2xl border border-white/10 bg-[#1A1A1F] p-4">
@@ -15,13 +15,13 @@
         :disabled="disabled"
         @input="onInput"
       />
-      <p v-if="disabled" class="mt-2 text-xs text-white/60">Selecione uma quadra para liberar o calendario.</p>
+      <p v-if="disabled" class="mt-2 text-xs text-white/60">Selecione uma quadra para liberar o calend&#225;rio.</p>
     </div>
 
     <div class="rounded-2xl border border-white/10 bg-[#1A1A1F] p-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 class="text-sm font-semibold text-white">Calendario aberto</h3>
+          <h3 class="text-sm font-semibold text-white">Calend&#225;rio aberto</h3>
           <p class="text-xs text-white/60">{{ monthLabel }}</p>
         </div>
         <div class="flex items-center gap-2">
@@ -29,7 +29,7 @@
             type="button"
             class="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:border-[#FF7A00]/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             :disabled="disabled || !canPrev"
-            aria-label="Mes anterior"
+            aria-label="M&#234;s anterior"
             @click="emit('prev-month')"
           >
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -40,7 +40,7 @@
             type="button"
             class="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:border-[#FF7A00]/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             :disabled="disabled || !canNext"
-            aria-label="Proximo mes"
+            aria-label="Pr&#243;ximo m&#234;s"
             @click="emit('next-month')"
           >
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -84,11 +84,11 @@
       <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-white/60">
         <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-          Disponivel
+          Dispon&#237;vel
         </div>
         <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-rose-400"></span>
-          Indisponivel
+          Indispon&#237;vel
         </div>
         <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-white/30"></span>
@@ -97,7 +97,7 @@
       </div>
 
       <div v-if="loadingCalendar" class="mt-3 text-xs text-white/60">
-        Atualizando disponibilidade do mes...
+        Atualizando disponibilidade do m&#234;s...
       </div>
     </div>
   </section>

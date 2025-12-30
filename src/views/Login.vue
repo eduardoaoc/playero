@@ -298,14 +298,14 @@ const handleSubmit = async () => {
     }
     if (status === 422) {
       const validationMessage = getValidationMessage(error);
-      setError('Dados inv??lidos.', validationMessage || 'Verifique seus dados e tente novamente.');
+      setError('Dados inv\u00e1lidos.', validationMessage || 'Verifique seus dados e tente novamente.');
       return;
     }
     if (error?.normalized?.message) {
       setError(error.normalized.message, 'Verifique seus dados e tente novamente.');
       return;
     }
-    setError('N??o foi poss??vel entrar.', 'Verifique sua conex??o e tente novamente.');
+    setError('N\u00e3o foi poss\u00edvel entrar.', 'Verifique sua conex\u00e3o e tente novamente.');
   } finally {
     isSubmitting.value = false;
   }

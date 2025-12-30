@@ -33,7 +33,13 @@
             </template>
           </SectionHeader>
 
-          <div class="dashboard-quadra-grid">
+          <EmptyStateCard
+            v-if="!isQuadrasLoading && !quadras.length"
+            title="Nenhuma quadra encontrada"
+            description="Nenhuma quadra criada ainda."
+            icon="grid"
+          />
+          <div v-else class="dashboard-quadra-grid">
             <QuadraCard
               v-for="quadra in quadras"
               :key="quadra.id"
@@ -58,7 +64,13 @@
             </template>
           </SectionHeader>
 
-          <div class="dashboard-event-grid">
+          <EmptyStateCard
+            v-if="!isEventosLoading && !eventos.length"
+            title="Nenhum evento encontrado"
+            description="Nenhum evento criado ainda."
+            icon="sparkle"
+          />
+          <div v-else class="dashboard-event-grid">
             <EventoCard
               v-for="evento in eventos"
               :key="evento.id"
@@ -133,6 +145,7 @@ import EventoCard from '../components/EventoCard.vue';
 import AcoesRapidas from '../components/AcoesRapidas.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
+import EmptyStateCard from '../components/EmptyStateCard.vue';
 import NovaQuadraModal from '../components/modals/NovaQuadraModal.vue';
 import ModalCriarCliente from '../components/modals/ModalCriarCliente.vue';
 import ModalCriarReserva from '../components/modals/ModalCriarReserva.vue';
@@ -210,8 +223,9 @@ const defaultKpis = [
 
 const kpis = ref([...defaultKpis]);
 const quadras = ref([]);
-
 const eventos = ref([]);
+const isQuadrasLoading = ref(true);
+const isEventosLoading = ref(true);
 
 const infoCards = [
   {
@@ -224,8 +238,8 @@ const infoCards = [
   {
     id: 2,
     label: 'Alertas',
-    headline: '1 quadra em manuten??o',
-    text: 'Verificar rede, ilumina??o e areia.',
+    headline: '1 quadra em manuten\u00e7\u00e3o',
+    text: 'Verificar rede, ilumina\u00e7\u00e3o e areia.',
     details: [],
   },
   {
@@ -233,7 +247,7 @@ const infoCards = [
     label: 'Financeiro',
     headline: 'Resumo do dia (mock)',
     text: 'Receita prevista: R$ 3.420',
-    details: ['Ticket m?dio: R$ 68'],
+    details: ['Ticket m\u00e9dio: R$ 68'],
   },
   {
     id: 4,
@@ -402,7 +416,7 @@ const resolveQuadraStatus = (quadra) => {
     return String(rawStatus);
   }
   if (quadra?.raw?.ativa === false || quadra?.raw?.ativo === false) {
-    return 'Manutencao';
+    return 'Manuten\u00e7\u00e3o';
   }
   return 'Livre';
 };
@@ -490,6 +504,7 @@ const handleForbidden = (error, fallback) => {
 };
 
 const loadDashboard = async () => {
+  isEventosLoading.value = true;
   try {
     const payload = await adminDashboardService.getDashboard();
     const normalized = resolveKpis(payload);
@@ -498,16 +513,21 @@ const loadDashboard = async () => {
     }
     eventos.value = resolveEventos(payload);
   } catch (error) {
-    handleForbidden(error, 'Sem permissao para acessar o dashboard.');
+    handleForbidden(error, 'Sem permiss\u00e3o para acessar o dashboard.');
+  } finally {
+    isEventosLoading.value = false;
   }
 };
 
 const loadQuadras = async () => {
+  isQuadrasLoading.value = true;
   try {
     const items = await quadrasService.listQuadras({ includeInactive: true });
     quadras.value = normalizeAdminQuadras(items);
   } catch (error) {
-    handleForbidden(error, 'Sem permissao para listar quadras.');
+    handleForbidden(error, 'Sem permiss\u00e3o para listar quadras.');
+  } finally {
+    isQuadrasLoading.value = false;
   }
 };
 

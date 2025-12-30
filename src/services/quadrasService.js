@@ -33,7 +33,7 @@ export const normalizeQuadras = (payload, { includeInactive = false } = {}) => {
 
       const statusValue =
         quadra?.status ??
-        (quadra?.ativa === false || quadra?.ativo === false ? 'Manutencao' : 'Livre');
+        (quadra?.ativa === false || quadra?.ativo === false ? 'Manuten\u00e7\u00e3o' : 'Livre');
 
       return {
         id: quadraId,

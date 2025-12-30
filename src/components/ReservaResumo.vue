@@ -20,7 +20,7 @@
         <span class="text-white">{{ displayData }}</span>
       </div>
       <div class="flex items-center justify-between gap-3">
-        <span class="text-white/60">Horario</span>
+        <span class="text-white/60">Hor&#225;rio</span>
         <span class="text-white">{{ displayHorario }}</span>
       </div>
     </div>

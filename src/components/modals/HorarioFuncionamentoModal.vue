@@ -3,8 +3,8 @@
     <div class="modal-card" @click.stop>
       <header class="modal-header">
         <div>
-          <p class="modal-eyebrow">Horario de funcionamento</p>
-          <h3 class="modal-title">Definir horario padrao</h3>
+          <p class="modal-eyebrow">Hor&#225;rio de funcionamento</p>
+          <h3 class="modal-title">Definir hor&#225;rio padr&#227;o</h3>
         </div>
         <button class="modal-close" type="button" @click="emitClose">
           <DashboardIcon name="x" />
@@ -44,7 +44,7 @@
           </button>
           <button class="dash-action dash-action--primary" type="submit" :disabled="isSaving">
             <span v-if="isSaving">Salvando...</span>
-            <span v-else>Salvar horario</span>
+            <span v-else>Salvar hor&#225;rio</span>
           </button>
         </div>
       </form>

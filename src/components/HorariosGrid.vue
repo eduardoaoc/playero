@@ -1,15 +1,15 @@
 <template>
   <section class="space-y-4">
     <div>
-      <h2 class="text-lg font-semibold text-white">3. Horarios disponiveis</h2>
-      <p class="text-sm text-[#B5B5B5]">Escolha um horario livre para a reserva.</p>
+      <h2 class="text-lg font-semibold text-white">3. Hor&#225;rios dispon&#237;veis</h2>
+      <p class="text-sm text-[#B5B5B5]">Escolha um hor&#225;rio livre para a reserva.</p>
     </div>
 
     <div
       v-if="disabled"
       class="rounded-2xl border border-white/10 bg-[#1A1A1F] px-4 py-3 text-sm text-white/60"
     >
-      Selecione uma quadra e uma data para ver os horarios.
+      Selecione uma quadra e uma data para ver os hor&#225;rios.
     </div>
 
     <div
@@ -27,7 +27,7 @@
       v-else-if="horarios.length === 0"
       class="rounded-2xl border border-white/10 bg-[#1A1A1F] px-4 py-3 text-sm text-white/70"
     >
-      Sem horarios disponiveis.
+      Sem hor&#225;rios dispon&#237;veis.
     </div>
 
     <div v-else class="grid gap-3 sm:grid-cols-3">

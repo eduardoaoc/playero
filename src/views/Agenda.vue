@@ -8,19 +8,12 @@
       :user="sidebarUser"
     />
 
-    <Topbar
-      title="Agenda"
-      subtitle="Configuracao de agenda"
-      :user="topbarUser"
-      :show-theme-toggle="false"
-    />
-
     <main class="dashboard-main">
       <div class="dashboard-content">
         <section class="dashboard-section">
           <SectionHeader
-            title="Agenda / Configuracao de agenda"
-            subtitle="Gerencie horarios, excecoes e bloqueios manuais."
+            title="Agenda / Configura&#231;&#227;o de agenda"
+            subtitle="Gerencie hor&#225;rios, exce&#231;&#245;es e bloqueios manuais."
           />
 
           <div v-if="!canAccess" class="access-card">
@@ -28,9 +21,9 @@
               <DashboardIcon name="shield" />
             </div>
             <div>
-              <h3 class="access-title">Area restrita</h3>
+              <h3 class="access-title">&#193;rea restrita</h3>
               <p class="access-text">
-                Apenas perfis admin ou super_admin podem acessar a configuracao de agenda.
+                Apenas perfis admin ou super_admin podem acessar a configura&#231;&#227;o de agenda.
               </p>
             </div>
           </div>
@@ -39,13 +32,13 @@
         <template v-if="canAccess">
           <section class="dashboard-section">
             <SectionHeader
-              title="Configuracao geral da agenda"
-              subtitle="Defina horario base, dias ativos e timezone."
+              title="Configura&#231;&#227;o geral da agenda"
+              subtitle="Defina hor&#225;rio base, dias ativos e timezone."
             >
               <template #actions>
                 <button class="dash-action dash-action--primary" type="button" @click="openConfigModal">
                   <DashboardIcon name="settings" />
-                  Editar configuracao
+                  Editar configura&#231;&#227;o
                 </button>
               </template>
             </SectionHeader>
@@ -59,8 +52,8 @@
 
           <section class="dashboard-section">
             <SectionHeader
-              title="Horario de funcionamento"
-              subtitle="Horario padrao usado no fluxo de reservas."
+              title="Hor&#225;rio de funcionamento"
+              subtitle="Hor&#225;rio padr&#227;o usado no fluxo de reservas."
             >
               <template #actions>
                 <button
@@ -69,7 +62,7 @@
                   @click="openHorarioModal"
                 >
                   <DashboardIcon name="clock" />
-                  Definir horario de funcionamento
+                  Definir hor&#225;rio de funcionamento
                 </button>
               </template>
             </SectionHeader>
@@ -89,36 +82,41 @@
                   <strong class="info-value">{{ activeDaysLabel }}</strong>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Duracao padrao</span>
+                  <span class="info-label">Dura&#231;&#227;o padr&#227;o</span>
                   <strong class="info-value">{{ durationLabel }}</strong>
                 </div>
               </div>
               <div class="info-note">
                 <DashboardIcon name="clock" :size="18" />
-                <span>Alteracoes aqui atualizam a configuracao geral da agenda.</span>
+                <span>Altera&#231;&#245;es aqui atualizam a configura&#231;&#227;o geral da agenda.</span>
               </div>
             </div>
           </section>
 
           <section class="dashboard-section">
             <SectionHeader
-              title="Excecoes de funcionamento"
-              subtitle="Datas especiais com horario personalizado."
+              title="Exce&#231;&#245;es de funcionamento"
+              subtitle="Datas especiais com hor&#225;rio personalizado."
             >
               <template #actions>
                 <button class="dash-action dash-action--primary" type="button" @click="openExceptionModal">
                   <DashboardIcon name="calendar-plus" />
-                  Adicionar excecao
+                  Adicionar exce&#231;&#227;o
                 </button>
               </template>
             </SectionHeader>
 
-            <div class="exceptions-card">
+            <EmptyStateCard
+              v-if="!exceptionsLoading && !exceptions.length"
+              title="Nenhuma exce&#231;&#227;o encontrada"
+              description="Nenhuma exce&#231;&#227;o de funcionamento cadastrada."
+              icon="calendar"
+              action-label="Adicionar exce&#231;&#227;o"
+              :action-callback="openExceptionModal"
+            />
+            <div v-else class="exceptions-card">
               <div v-if="exceptionsLoading" class="card-empty">
-                Carregando excecoes...
-              </div>
-              <div v-else-if="!exceptions.length" class="card-empty">
-                Nenhuma excecao cadastrada.
+                Carregando exce&#231;&#245;es...
               </div>
               <div v-else class="exceptions-grid">
                 <div v-for="exception in exceptions" :key="exception.id" class="exception-item">
@@ -134,7 +132,7 @@
                       </p>
                     </div>
                     <span class="exception-badge" :class="{ 'is-closed': exception.fechado }">
-                      {{ exception.fechado ? 'Fechado' : 'Horario especial' }}
+                      {{ exception.fechado ? 'Fechado' : 'Hor\u00e1rio especial' }}
                     </span>
                   </div>
                   <p v-if="exception.motivo" class="exception-motivo">{{ exception.motivo }}</p>
@@ -154,7 +152,7 @@
           <section class="dashboard-section">
             <SectionHeader
               title="Bloqueios manuais"
-              subtitle="Gerencie manutencoes e indisponibilidades."
+              subtitle="Gerencie manuten&#231;&#245;es e indisponibilidades."
             >
               <template #actions>
                 <button class="dash-action dash-action--primary" type="button" @click="openBlockingModal">
@@ -164,7 +162,16 @@
               </template>
             </SectionHeader>
 
+            <EmptyStateCard
+              v-if="!blockingsLoading && !normalizedBlockings.length"
+              title="Nenhum bloqueio encontrado"
+              description="Nenhum bloqueio manual cadastrado."
+              icon="ban"
+              action-label="Adicionar bloqueio"
+              :action-callback="openBlockingModal"
+            />
             <BlockingsTable
+              v-else
               :blockings="normalizedBlockings"
               :loading="blockingsLoading"
               :can-manage="canAccess"
@@ -197,8 +204,8 @@
       <div class="modal-card" @click.stop>
         <header class="modal-header">
           <div>
-            <p class="modal-eyebrow">Configuracao geral</p>
-            <h3 class="modal-title">Editar configuracao da agenda</h3>
+            <p class="modal-eyebrow">Configura&#231;&#227;o geral</p>
+            <h3 class="modal-title">Editar configura&#231;&#227;o da agenda</h3>
           </div>
           <button class="modal-close" type="button" @click="closeConfigModal">
             <DashboardIcon name="x" />
@@ -218,10 +225,10 @@
               <small v-if="showConfigCloseError" class="form-error">Informe a hora de fechamento.</small>
             </label>
             <label class="form-field" :class="{ 'has-error': showConfigDurationError }">
-              <span>Duracao padrao (minutos)</span>
+              <span>Dura&#231;&#227;o padr&#227;o (minutos)</span>
               <input v-model.number="configForm.duracao_reserva_minutos" type="number" min="30" step="15" />
               <small v-if="showConfigDurationError" class="form-error">
-                Informe a duracao padrao.
+                Informe a dura&#231;&#227;o padr&#227;o.
               </small>
             </label>
             <label class="form-field" :class="{ 'has-error': showConfigTimezoneError }">
@@ -250,7 +257,7 @@
             </button>
             <button class="dash-action dash-action--primary" type="submit" :disabled="isConfigSaving">
               <span v-if="isConfigSaving">Salvando...</span>
-              <span v-else>Salvar configuracao</span>
+              <span v-else>Salvar configura&#231;&#227;o</span>
             </button>
           </div>
         </form>
@@ -289,9 +296,9 @@
               <small v-if="showBlockingDateError" class="form-error">Informe a data.</small>
             </label>
             <label class="form-field" :class="{ 'has-error': showBlockingStartError }">
-              <span>Hora inicio</span>
+              <span>Hora in&#237;cio</span>
               <input v-model="blockingForm.hora_inicio" type="time" />
-              <small v-if="showBlockingStartError" class="form-error">Informe a hora inicio.</small>
+              <small v-if="showBlockingStartError" class="form-error">Informe a hora in&#237;cio.</small>
             </label>
             <label class="form-field" :class="{ 'has-error': showBlockingEndError }">
               <span>Hora fim</span>
@@ -300,7 +307,7 @@
             </label>
             <label class="form-field form-field--wide">
               <span>Motivo</span>
-              <input v-model="blockingForm.motivo" type="text" placeholder="Manutencao" />
+              <input v-model="blockingForm.motivo" type="text" placeholder="Manuten&#231;&#227;o" />
             </label>
           </div>
 
@@ -324,12 +331,12 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
-import Topbar from '../components/Topbar.vue';
 import SectionHeader from '../components/SectionHeader.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
 import AgendaConfigCard from '../components/AgendaConfigCard.vue';
 import BlockingsTable from '../components/BlockingsTable.vue';
+import EmptyStateCard from '../components/EmptyStateCard.vue';
 import HorarioFuncionamentoModal from '../components/modals/HorarioFuncionamentoModal.vue';
 import ExcecaoHorarioModal from '../components/modals/ExcecaoHorarioModal.vue';
 import { agendaService } from '../services/agendaService';
@@ -359,12 +366,12 @@ const generalItems = computed(() =>
   baseGeneralItems.filter((item) => item.label !== 'Administradores' || isSuperAdmin.value),
 );
 
-const supportItems = [{ label: 'Configuracoes', icon: 'settings', href: '#' }];
+const supportItems = [{ label: 'Configura\u00e7\u00f5es', icon: 'settings', href: '#' }];
 
 const quickAction = {
-  title: 'Atalho rapido',
+  title: 'Atalho r\u00e1pido',
   description: 'Configurar agenda com poucos cliques.',
-  buttonLabel: 'Nova excecao',
+  buttonLabel: 'Nova exce\u00e7\u00e3o',
   href: '#',
 };
 
@@ -376,7 +383,6 @@ const sidebarUser = computed(() => {
   };
 });
 
-const topbarUser = computed(() => sidebarUser.value);
 
 const weekDays = [
   { label: 'Seg', value: 1 },
@@ -384,7 +390,7 @@ const weekDays = [
   { label: 'Qua', value: 3 },
   { label: 'Qui', value: 4 },
   { label: 'Sex', value: 5 },
-  { label: 'Sab', value: 6 },
+  { label: 'S\u00e1b', value: 6 },
   { label: 'Dom', value: 7 },
 ];
 
@@ -634,7 +640,7 @@ const persistConfig = async (payload) => {
     agendaConfig.value = normalizeConfig(response);
     return true;
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel salvar a configuracao.');
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel salvar a configura\u00e7\u00e3o.');
     return false;
   } finally {
     isConfigSaving.value = false;
@@ -701,7 +707,7 @@ const handleExceptionSave = async (payload) => {
     }
     closeExceptionModal();
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel salvar a excecao.');
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel salvar a exce\u00e7\u00e3o.');
   } finally {
     isExceptionSaving.value = false;
   }
@@ -715,7 +721,7 @@ const handleDeleteException = async (exception) => {
     await agendaService.deleteException(exception.id);
     exceptions.value = exceptions.value.filter((item) => item.id !== exception.id);
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel excluir a excecao.');
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel excluir a exce\u00e7\u00e3o.');
   }
 };
 
@@ -758,7 +764,7 @@ const handleCreateBlocking = async () => {
     ];
     closeBlockingModal();
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel salvar o bloqueio.');
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel salvar o bloqueio.');
   } finally {
     isBlockingSaving.value = false;
   }
@@ -772,7 +778,7 @@ const handleDeleteBlocking = async (blocking) => {
     await agendaService.deleteBlocking(blocking.id);
     blockings.value = blockings.value.filter((item) => item.id !== blocking.id);
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel excluir o bloqueio.');
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel excluir o bloqueio.');
   }
 };
 
@@ -785,7 +791,7 @@ const loadConfig = async () => {
     const response = await agendaService.getConfig();
     agendaConfig.value = normalizeConfig(response);
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel carregar a configuracao.', [404]);
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel carregar a configura\u00e7\u00e3o.', [404]);
   } finally {
     isConfigLoading.value = false;
   }
@@ -801,7 +807,7 @@ const loadExceptions = async () => {
     const data = response?.data ?? response ?? [];
     exceptions.value = Array.isArray(data) ? data.map(normalizeException) : [];
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel carregar as excecoes.', [404]);
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel carregar as exce\u00e7\u00f5es.', [404]);
   } finally {
     exceptionsLoading.value = false;
   }
@@ -817,7 +823,7 @@ const loadBlockings = async () => {
     const data = response?.data ?? response ?? [];
     blockings.value = Array.isArray(data) ? data : [];
   } catch (error) {
-    handleApiError(error, 'Nao foi possivel carregar os bloqueios.');
+    handleApiError(error, 'N\u00e3o foi poss\u00edvel carregar os bloqueios.');
   } finally {
     blockingsLoading.value = false;
   }
@@ -870,7 +876,7 @@ onMounted(() => {
 
 .dashboard-main {
   margin-left: var(--dash-sidebar-width);
-  padding-top: calc(var(--dash-topbar-height) + 32px);
+  padding-top: 32px;
   padding-bottom: 40px;
   min-height: 100vh;
 }
@@ -1270,7 +1276,7 @@ onMounted(() => {
 @media (max-width: 1024px) {
   .dashboard-main {
     margin-left: 0;
-    padding-top: calc(var(--dash-topbar-height) + 24px);
+    padding-top: 24px;
   }
 
   .dashboard-content {

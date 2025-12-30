@@ -2,7 +2,7 @@
   <div class="config-card">
     <div class="config-header">
       <div>
-        <p class="config-eyebrow">Configuracao geral</p>
+        <p class="config-eyebrow">Configura&#231;&#227;o geral</p>
         <h3 class="config-title">Agenda principal</h3>
       </div>
       <span class="config-status" :class="{ 'is-loading': isLoading }">
@@ -11,7 +11,7 @@
     </div>
 
     <div v-if="isLoading" class="config-empty">
-      Carregando configuracao da agenda...
+      Carregando configura&#231;&#227;o da agenda...
     </div>
     <div v-else class="config-grid">
       <div class="config-item">
@@ -23,7 +23,7 @@
         <strong class="config-value">{{ config.hora_fechamento || '--:--' }}</strong>
       </div>
       <div class="config-item">
-        <span class="config-label">Duracao padrao</span>
+        <span class="config-label">Dura&#231;&#227;o padr&#227;o</span>
         <strong class="config-value">{{ durationLabel }}</strong>
       </div>
       <div class="config-item">

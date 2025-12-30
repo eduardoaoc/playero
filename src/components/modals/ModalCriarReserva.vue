@@ -29,15 +29,15 @@
             <small v-if="showDataError" class="form-error">Informe a data.</small>
           </label>
           <label class="form-field" :class="{ 'has-error': showHorarioError }">
-            <span>Horario</span>
+            <span>Hor&#225;rio</span>
             <input v-model="form.horario" type="time" />
-            <small v-if="showHorarioError" class="form-error">Informe o horario.</small>
+            <small v-if="showHorarioError" class="form-error">Informe o hor&#225;rio.</small>
           </label>
           <label class="form-field">
             <span>Forma de pagamento</span>
             <select v-model="form.pagamento">
               <option value="PIX">PIX</option>
-              <option value="Cartao">Cartao</option>
+              <option value="Cartao">Cart&#227;o</option>
               <option value="---">---</option>
             </select>
           </label>

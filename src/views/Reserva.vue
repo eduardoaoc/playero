@@ -4,7 +4,7 @@
       :logo-src="logoSrc"
       :logo-text="brandName"
       :links="navLinks"
-      cta-label="Inicio"
+      cta-label="In&#237;cio"
       cta-href="/"
       :show-user="true"
     />
@@ -18,7 +18,7 @@
       <header class="max-w-3xl">
         <h1 class="text-3xl font-semibold text-white sm:text-4xl">Reserva de quadras</h1>
         <p class="mt-3 text-sm leading-relaxed text-[#B5B5B5] sm:text-base">
-          Escolha a quadra, a data e o horario. Confirmando agora, sua reserva fica pendente de pagamento.
+          Escolha a quadra, a data e o hor&#225;rio. Confirmando agora, sua reserva fica pendente de pagamento.
         </p>
       </header>
 
@@ -96,7 +96,7 @@
 
           <div class="rounded-2xl border border-white/10 bg-[#15151B] p-5 text-sm text-white/60">
             <p>
-              Precisa alterar algo? Basta escolher outra quadra, data ou horario para gerar uma nova reserva.
+              Precisa alterar algo? Basta escolher outra quadra, data ou hor&#225;rio para gerar uma nova reserva.
             </p>
           </div>
         </aside>
@@ -144,15 +144,15 @@ const calendarRequestId = ref(0);
 const navLinks = [
   { label: 'Quadras', href: '#quadra' },
   { label: 'Data', href: '#data' },
-  { label: 'Horarios', href: '#horarios' },
-  { label: 'Confirmacao', href: '#confirmacao' },
+  { label: 'Hor\u00e1rios', href: '#horarios' },
+  { label: 'Confirma\u00e7\u00e3o', href: '#confirmacao' },
 ];
 
 const weekLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
 const monthNames = [
   'Janeiro',
   'Fevereiro',
-  'Marco',
+  'Mar\u00e7o',
   'Abril',
   'Maio',
   'Junho',
@@ -276,14 +276,14 @@ const fetchQuadras = async () => {
   } catch (error) {
     const status = error?.response?.status;
     if (status === 403) {
-      erroQuadras.value = error?.normalized?.message || 'Sem permissao para listar quadras.';
+      erroQuadras.value = error?.normalized?.message || 'Sem permiss\u00e3o para listar quadras.';
       return;
     }
     if (status === 422) {
-      erroQuadras.value = getValidationMessage(error) || 'Dados invalidos. Tente novamente.';
+      erroQuadras.value = getValidationMessage(error) || 'Dados inv\u00e1lidos. Tente novamente.';
       return;
     }
-    erroQuadras.value = 'Nao foi possivel carregar as quadras. Tente novamente.';
+    erroQuadras.value = 'N\u00e3o foi poss\u00edvel carregar as quadras. Tente novamente.';
   } finally {
     loadingQuadras.value = false;
   }
@@ -308,17 +308,17 @@ const loadDisponibilidade = async () => {
   } catch (error) {
     const status = error?.response?.status;
     if (status === 403) {
-      erroDisponibilidade.value = error?.normalized?.message || 'Sem permissao para consultar horarios.';
+      erroDisponibilidade.value = error?.normalized?.message || 'Sem permiss\u00e3o para consultar hor\u00e1rios.';
       horarios.value = [];
       return;
     }
     if (status === 422) {
-      erroDisponibilidade.value = getValidationMessage(error) || 'Dados invalidos. Tente novamente.';
+      erroDisponibilidade.value = getValidationMessage(error) || 'Dados inv\u00e1lidos. Tente novamente.';
       horarios.value = [];
       return;
     }
     horarios.value = [];
-    erroDisponibilidade.value = 'Nao foi possivel carregar os horarios. Tente novamente.';
+    erroDisponibilidade.value = 'N\u00e3o foi poss\u00edvel carregar os hor\u00e1rios. Tente novamente.';
   } finally {
     loadingHorarios.value = false;
   }
@@ -487,17 +487,17 @@ const confirmarReserva = async () => {
   } catch (error) {
     const status = error?.response?.status;
     if (status === 403) {
-      erroReserva.value = error?.normalized?.message || 'Sem permissao para criar reserva.';
+      erroReserva.value = error?.normalized?.message || 'Sem permiss\u00e3o para criar reserva.';
       return;
     }
     if (status === 422) {
-      erroReserva.value = getValidationMessage(error) || 'Dados invalidos. Revise e tente novamente.';
+      erroReserva.value = getValidationMessage(error) || 'Dados inv\u00e1lidos. Revise e tente novamente.';
       return;
     }
     if (status === 409) {
-      erroReserva.value = 'Horario indisponivel. Escolha outro horario.';
+      erroReserva.value = 'Hor\u00e1rio indispon\u00edvel. Escolha outro hor\u00e1rio.';
     } else {
-      erroReserva.value = 'Nao foi possivel confirmar a reserva. Tente novamente.';
+      erroReserva.value = 'N\u00e3o foi poss\u00edvel confirmar a reserva. Tente novamente.';
     }
   } finally {
     loadingReserva.value = false;

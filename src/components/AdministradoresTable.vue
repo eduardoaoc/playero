@@ -25,7 +25,7 @@
             <th>Email</th>
             <th>Role</th>
             <th>Status</th>
-            <th>Acoes</th>
+            <th>A&#231;&#245;es</th>
           </tr>
         </thead>
         <tbody>
@@ -65,7 +65,7 @@
                   Excluir
                 </button>
               </div>
-              <span v-else class="table-muted">Sem permissao</span>
+              <span v-else class="table-muted">Sem permiss&#227;o</span>
             </td>
           </tr>
         </tbody>

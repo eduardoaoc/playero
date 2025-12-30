@@ -11,7 +11,7 @@
     <main class="dashboard-main">
       <div class="dashboard-content">
         <section class="dashboard-section">
-          <SectionHeader title="Administradores" subtitle="Gestao de administradores">
+          <SectionHeader title="Administradores" subtitle="Gest&#227;o de administradores">
             <template #actions>
               <button
                 v-if="isSuperAdmin"
@@ -30,15 +30,24 @@
               <DashboardIcon name="shield" />
             </div>
             <div>
-              <h3 class="access-title">Area restrita</h3>
+              <h3 class="access-title">&#193;rea restrita</h3>
               <p class="access-text">
-                Apenas usuarios com perfil super_admin podem gerenciar administradores.
+                Apenas usu&#225;rios com perfil super_admin podem gerenciar administradores.
               </p>
             </div>
           </div>
 
           <template v-else>
+            <EmptyStateCard
+              v-if="!loading && !admins.length"
+              title="Nenhum administrador encontrado"
+              description="Nenhum administrador cadastrado."
+              icon="shield"
+              action-label="Criar administrador"
+              :action-callback="openCreateModal"
+            />
             <AdministradoresTable
+              v-else
               :admins="admins"
               :loading="loading"
               :can-manage="isSuperAdmin"
@@ -72,7 +81,7 @@
       <div class="modal-card modal-card--small" @click.stop>
         <header class="modal-header">
           <div>
-            <p class="modal-eyebrow">Confirmar exclusao</p>
+            <p class="modal-eyebrow">Confirmar exclus&#227;o</p>
             <h3 class="modal-title">Excluir administrador</h3>
           </div>
           <button class="modal-close" type="button" @click="closeDeleteModal">
@@ -82,7 +91,7 @@
         <div class="modal-body">
           <p class="modal-text">
             Tem certeza que deseja excluir
-            <strong>{{ selectedAdmin?.name || 'este administrador' }}</strong>? Essa acao e irreversivel.
+            <strong>{{ selectedAdmin?.name || 'este administrador' }}</strong>? Essa a&#231;&#227;o &#233; irrevers&#237;vel.
           </p>
           <div class="modal-actions">
             <button class="dash-action dash-action--ghost" type="button" @click="closeDeleteModal">
@@ -108,6 +117,7 @@ import SectionHeader from '../components/SectionHeader.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
 import AdministradoresTable from '../components/AdministradoresTable.vue';
+import EmptyStateCard from '../components/EmptyStateCard.vue';
 import ModalCriarAdmin from '../components/modals/ModalCriarAdmin.vue';
 import ModalEditarAdmin from '../components/modals/ModalEditarAdmin.vue';
 import { adminsService } from '../services/adminsService';
@@ -136,10 +146,10 @@ const generalItems = computed(() =>
   baseGeneralItems.filter((item) => item.label !== 'Administradores' || isSuperAdmin.value),
 );
 
-const supportItems = [{ label: 'Configuracoes', icon: 'settings', href: '#' }];
+const supportItems = [{ label: 'Configura\u00e7\u00f5es', icon: 'settings', href: '#' }];
 
 const quickAction = {
-  title: 'Atalho rapido',
+  title: 'Atalho r\u00e1pido',
   description: 'Criar um novo administrador rapidamente.',
   buttonLabel: 'Novo administrador',
   href: '#',
@@ -153,7 +163,7 @@ const sidebarUser = computed(() => {
   };
 });
 
-const useMock = true;
+const useMock = false;
 const loading = ref(false);
 const isSaving = ref(false);
 const isDeleting = ref(false);
