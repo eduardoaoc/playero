@@ -139,7 +139,7 @@ const baseGeneralItems = [
   { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas' },
   { label: 'Administradores', icon: 'shield', href: '/admin/administradores', active: true },
   { label: 'Agenda', icon: 'calendar', href: '/admin/agenda' },
-  { label: 'Eventos', icon: 'sparkle', href: '#' },
+  { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
 ];
 
 const generalItems = computed(() =>
@@ -357,7 +357,7 @@ const mobileNav = [
   { label: 'Dashboard', icon: 'dashboard', href: '/admin' },
   { label: 'Clientes', icon: 'users', href: '/admin/clientes' },
   { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas' },
-  { label: 'Eventos', icon: 'sparkle', href: '#' },
+  { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
   { label: 'Perfil', icon: 'user', href: '#' },
 ];
 

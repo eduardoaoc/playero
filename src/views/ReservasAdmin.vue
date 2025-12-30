@@ -264,7 +264,12 @@
             </label>
             <label class="modal-field">
               <span>Quadra</span>
-              <input v-model="createForm.quadra" type="text" placeholder="Quadra 01" />
+              <select v-model="createForm.quadra_id" :disabled="isQuadraSelectDisabled">
+                <option value="" disabled>{{ quadraPlaceholder }}</option>
+                <option v-for="quadra in quadraOptions" :key="quadra.id" :value="quadra.id">
+                  {{ quadra.label }}
+                </option>
+              </select>
             </label>
             <label class="modal-field">
               <span>Data</span>
@@ -381,9 +386,12 @@ import ReservaRow from '../components/ReservaRow.vue';
 import ReservaStatusBadge from '../components/ReservaStatusBadge.vue';
 import CalendarioReservas from '../components/CalendarioReservas.vue';
 import { reservasService } from '../services/reservasService';
+import { quadrasService } from '../services/quadrasService';
+import { useAlert } from '../composables/useAlert';
 import { useAuth } from '../stores/auth';
 
 const auth = useAuth();
+const { showAlert } = useAlert();
 const userRole = 'super_admin';
 const isSuperAdmin = computed(() => userRole === 'super_admin');
 const canAccess = computed(() => ['admin', 'super_admin'].includes(userRole.toLowerCase()));
@@ -400,7 +408,7 @@ const baseGeneralItems = [
   { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas', active: true },
   { label: 'Administradores', icon: 'shield', href: '/admin/administradores' },
   { label: 'Agenda', icon: 'calendar', href: '/admin/agenda' },
-  { label: 'Eventos', icon: 'sparkle', href: '#' },
+  { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
 ];
 
 const generalItems = computed(() =>
@@ -440,6 +448,7 @@ const calendarMonthMax = formatMonthFilter(maxFutureDate.getFullYear(), maxFutur
 
 const reservas = ref([]);
 const loading = ref(false);
+const quadrasLoading = ref(false);
 const selectedReservaId = ref(null);
 const isCreateModalOpen = ref(false);
 const pagination = ref({
@@ -447,10 +456,12 @@ const pagination = ref({
   perPage: 10,
 });
 const paymentFilter = ref('all');
+const quadras = ref([]);
+const quadrasError = ref('');
 
 const createForm = ref({
   cliente: '',
-  quadra: '',
+  quadra_id: '',
   data: '',
   horario: '',
   pagamento: 'PIX',
@@ -836,9 +847,43 @@ const stats = computed(() => {
   };
 });
 
+const quadraOptions = computed(() =>
+  quadras.value.map((quadra, index) => ({
+    id: quadra.id,
+    label:
+      quadra?.name ??
+      quadra?.nome ??
+      `Quadra ${String(quadra?.id ?? index + 1).padStart(2, '0')}`,
+  })),
+);
+
+const quadraPlaceholder = computed(() => {
+  if (quadrasLoading.value) {
+    return 'Carregando quadras...';
+  }
+  if (quadrasError.value) {
+    return quadrasError.value;
+  }
+  if (!quadraOptions.value.length) {
+    return 'Nenhuma quadra dispon\u00edvel';
+  }
+  return 'Selecione a quadra';
+});
+
+const isQuadraSelectDisabled = computed(
+  () => quadrasLoading.value || Boolean(quadrasError.value) || !quadraOptions.value.length,
+);
+
+const selectedQuadra = computed(() =>
+  quadras.value.find((quadra) => String(quadra.id) === String(createForm.value.quadra_id)),
+);
+
 const openCreateModal = () => {
   if (!canAccess.value) {
     return;
+  }
+  if (!quadras.value.length && !quadrasLoading.value) {
+    loadQuadras();
   }
   isCreateModalOpen.value = true;
 };
@@ -854,37 +899,59 @@ const closeDetailsModal = () => {
 const resetCreateForm = () => {
   createForm.value = {
     cliente: '',
-    quadra: '',
+    quadra_id: '',
     data: '',
     horario: '',
     pagamento: 'PIX',
   };
 };
 
+const resolveQuadraLabel = (quadra, fallbackId) => {
+  if (quadra?.name) {
+    return quadra.name;
+  }
+  if (quadra?.nome) {
+    return quadra.nome;
+  }
+  if (fallbackId !== undefined && fallbackId !== null && fallbackId !== '') {
+    return `Quadra ${String(fallbackId).padStart(2, '0')}`;
+  }
+  return 'Quadra';
+};
+
 const handleCreateReserva = async () => {
-  if (!createForm.value.cliente || !createForm.value.quadra || !createForm.value.data || !createForm.value.horario) {
-    if (typeof window !== 'undefined') {
-      window.alert('Preencha todos os campos da reserva.');
-    }
+  if (
+    !createForm.value.cliente ||
+    !createForm.value.quadra_id ||
+    !createForm.value.data ||
+    !createForm.value.horario
+  ) {
+    showAlert({
+      type: 'warning',
+      title: 'Campos obrigatorios',
+      message: 'Preencha todos os campos da reserva.',
+      confirmText: 'Ok',
+    });
     return;
   }
 
+  const quadraLabel = resolveQuadraLabel(selectedQuadra.value, createForm.value.quadra_id);
   const payload = {
     cliente: createForm.value.cliente,
-    quadra: createForm.value.quadra,
+    quadra_id: createForm.value.quadra_id,
     data: createForm.value.data,
     horario: createForm.value.horario,
     forma_pagamento: createForm.value.pagamento,
   };
 
   if (!useMock) {
-    await reservasService.createReserva(payload);
+    await reservasService.createAdminReserva(payload);
   }
   const statusKey = createForm.value.pagamento === 'PIX' ? 'PRE-RESERVA' : 'CONFIRMADA';
   const newReserva = normalizeReserva({
     id: Date.now(),
     cliente: { nome: payload.cliente, email: 'cliente@playero.com' },
-    quadra: payload.quadra,
+    quadra: quadraLabel,
     data: payload.data,
     horaInicio: payload.horario,
     status: statusKey,
@@ -907,7 +974,7 @@ const handleCancelReserva = async (reserva) => {
   }
 
   if (!useMock) {
-    await reservasService.cancelarReserva(reserva.id);
+    await reservasService.cancelarAdminReserva(reserva.id);
   }
   reservas.value = reservas.value.map((item) =>
     item.id === reserva.id
@@ -924,9 +991,12 @@ const handleRefundReserva = (reserva) => {
   if (!reserva) {
     return;
   }
-  if (typeof window !== 'undefined') {
-    window.alert('Devolucao registrada para esta reserva.');
-  }
+  showAlert({
+    type: 'success',
+    title: 'Pagamento registrado',
+    message: 'Devolucao registrada para esta reserva.',
+    confirmText: 'Ok',
+  });
 };
 
 const changePage = (page) => {
@@ -943,7 +1013,7 @@ const loadReservas = async () => {
     if (useMock) {
       reservas.value = mockReservas.map(normalizeReserva);
     } else {
-      const payload = await reservasService.listReservas();
+      const payload = await reservasService.listAdminReservas();
       const data = payload?.data ?? payload ?? [];
       reservas.value = data.map(normalizeReserva);
     }
@@ -952,16 +1022,33 @@ const loadReservas = async () => {
   }
 };
 
+const loadQuadras = async () => {
+  if (!canAccess.value) {
+    return;
+  }
+  quadrasLoading.value = true;
+  quadrasError.value = '';
+  try {
+    quadras.value = await quadrasService.listQuadras();
+  } catch (error) {
+    quadrasError.value = error?.normalized?.message || 'N\u00e3o foi poss\u00edvel carregar as quadras.';
+    quadras.value = [];
+  } finally {
+    quadrasLoading.value = false;
+  }
+};
+
 const mobileNav = [
   { label: 'Dashboard', icon: 'dashboard', href: '/admin' },
   { label: 'Clientes', icon: 'users', href: '/admin/clientes' },
   { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas', active: true },
-  { label: 'Eventos', icon: 'sparkle', href: '#' },
+  { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
   { label: 'Perfil', icon: 'user', href: '#' },
 ];
 
 onMounted(() => {
   loadReservas();
+  loadQuadras();
 });
 
 watch(

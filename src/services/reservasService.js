@@ -65,6 +65,10 @@ export const reservasService = {
     const response = await apiClient.get('/api/v1/admin/reservas');
     return unwrap(response);
   },
+  async createAdminReserva(payload) {
+    const response = await apiClient.post('/api/v1/admin/reservas', payload);
+    return unwrap(response);
+  },
   async cancelarAdminReserva(id) {
     const response = await apiClient.post(`/api/v1/admin/reservas/${id}/cancelar`);
     return unwrap(response);

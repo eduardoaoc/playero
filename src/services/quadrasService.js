@@ -2,6 +2,30 @@ import apiClient from './apiClient';
 
 const unwrap = (response) => response?.data ?? response;
 
+const hasQuadraId = (quadra) =>
+  quadra && (quadra.id ?? quadra.quadra_id ?? quadra.uuid ?? quadra.codigo) !== undefined;
+
+const resolveQuadraPayload = (payload) => {
+  if (!payload) {
+    return null;
+  }
+  const candidates = [payload?.data?.quadra, payload?.quadra, payload?.data, payload];
+  for (const candidate of candidates) {
+    if (!candidate || Array.isArray(candidate)) {
+      continue;
+    }
+    if (hasQuadraId(candidate)) {
+      return candidate;
+    }
+  }
+  for (const candidate of candidates) {
+    if (candidate && !Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
 const isActiveQuadra = (quadra) => {
   if (quadra?.ativa !== undefined) {
     return Boolean(quadra.ativa);
@@ -48,6 +72,15 @@ export const normalizeQuadras = (payload, { includeInactive = false } = {}) => {
     .filter(Boolean);
 };
 
+export const normalizeSingleQuadra = (payload, options = {}) => {
+  const resolved = resolveQuadraPayload(payload);
+  if (!resolved) {
+    return null;
+  }
+  const [normalized] = normalizeQuadras([resolved], options);
+  return normalized ?? null;
+};
+
 export const quadrasService = {
   async listQuadras(options = {}) {
     const response = await apiClient.get('/api/v1/quadras');
@@ -55,7 +88,8 @@ export const quadrasService = {
   },
   async createQuadra(payload) {
     const response = await apiClient.post('/api/v1/quadras', payload);
-    return unwrap(response);
+    const data = unwrap(response);
+    return normalizeSingleQuadra(data, { includeInactive: true }) ?? data;
   },
   async updateQuadra(id, payload) {
     const response = await apiClient.put(`/api/v1/quadras/${id}`, payload);

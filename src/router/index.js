@@ -8,6 +8,7 @@ import Quadras from '../views/Quadras.vue';
 import ReservasAdmin from '../views/ReservasAdmin.vue';
 import Administradores from '../views/Administradores.vue';
 import Agenda from '../views/Agenda.vue';
+import Eventos from '../pages/Eventos.vue';
 import { useAuth } from '../stores/auth';
 
 const routes = [
@@ -60,6 +61,12 @@ const routes = [
     path: '/admin/agenda',
     name: 'admin-agenda',
     component: Agenda,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/eventos',
+    name: 'admin-eventos',
+    component: Eventos,
     meta: { requiresAuth: true },
   },
 ];

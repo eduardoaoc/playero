@@ -15,7 +15,6 @@
             title="Agenda / Configura&#231;&#227;o de agenda"
             subtitle="Gerencie hor&#225;rios, exce&#231;&#245;es e bloqueios manuais."
           />
-
           <div v-if="!canAccess" class="access-card">
             <div class="access-icon">
               <DashboardIcon name="shield" />
@@ -28,7 +27,6 @@
             </div>
           </div>
         </section>
-
         <template v-if="canAccess">
           <section class="dashboard-section">
             <SectionHeader
@@ -92,7 +90,6 @@
               </div>
             </div>
           </section>
-
           <section class="dashboard-section">
             <SectionHeader
               title="Exce&#231;&#245;es de funcionamento"
@@ -111,8 +108,6 @@
               title="Nenhuma exce&#231;&#227;o encontrada"
               description="Nenhuma exce&#231;&#227;o de funcionamento cadastrada."
               icon="calendar"
-              action-label="Adicionar exce&#231;&#227;o"
-              :action-callback="openExceptionModal"
             />
             <div v-else class="exceptions-card">
               <div v-if="exceptionsLoading" class="card-empty">
@@ -148,7 +143,6 @@
               </div>
             </div>
           </section>
-
           <section class="dashboard-section">
             <SectionHeader
               title="Bloqueios manuais"
@@ -167,8 +161,6 @@
               title="Nenhum bloqueio encontrado"
               description="Nenhum bloqueio manual cadastrado."
               icon="ban"
-              action-label="Adicionar bloqueio"
-              :action-callback="openBlockingModal"
             />
             <BlockingsTable
               v-else
@@ -340,9 +332,11 @@ import EmptyStateCard from '../components/EmptyStateCard.vue';
 import HorarioFuncionamentoModal from '../components/modals/HorarioFuncionamentoModal.vue';
 import ExcecaoHorarioModal from '../components/modals/ExcecaoHorarioModal.vue';
 import { agendaService } from '../services/agendaService';
+import { useAlert } from '../composables/useAlert';
 import { useAuth } from '../stores/auth';
 
 const auth = useAuth();
+const { showAlert } = useAlert();
 const userRole = 'admin';
 const isSuperAdmin = computed(() => userRole === 'super_admin');
 const canAccess = computed(() => ['admin', 'super_admin'].includes(String(userRole).toLowerCase()));
@@ -359,7 +353,7 @@ const baseGeneralItems = [
   { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas' },
   { label: 'Administradores', icon: 'shield', href: '/admin/administradores' },
   { label: 'Agenda', icon: 'calendar', href: '/admin/agenda', active: true },
-  { label: 'Eventos', icon: 'sparkle', href: '#' },
+  { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
 ];
 
 const generalItems = computed(() =>
@@ -505,8 +499,13 @@ const handleApiError = (error, fallback, silentStatuses = []) => {
     return;
   }
   const message = error?.normalized?.message || fallback;
-  if (typeof window !== 'undefined' && message) {
-    window.alert(message);
+  if (message) {
+    showAlert({
+      type: status === 403 ? 'warning' : 'error',
+      title: status === 403 ? 'Acesso restrito' : 'Erro',
+      message,
+      confirmText: 'Ok',
+    });
   }
 };
 
@@ -691,6 +690,7 @@ const handleExceptionSave = async (payload) => {
       data: payload.data,
       hora_abertura: payload.hora_abertura,
       hora_fechamento: payload.hora_fechamento,
+      fechado: payload.fechado,
       motivo: motivoValue,
     };
 

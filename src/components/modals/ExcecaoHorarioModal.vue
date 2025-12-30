@@ -115,13 +115,15 @@ const showTimeError = computed(() => {
 
 const syncForm = () => {
   const source = props.initialData || {};
+  const horaAbertura = source.hora_abertura ?? '';
+  const horaFechamento = source.hora_fechamento ?? '';
+  const hasTimes = Boolean(horaAbertura || horaFechamento);
+
   form.data = source.data ?? '';
-  form.hora_abertura = source.hora_abertura ?? '';
-  form.hora_fechamento = source.hora_fechamento ?? '';
+  form.hora_abertura = horaAbertura;
+  form.hora_fechamento = horaFechamento;
   form.motivo = source.motivo ?? '';
-  form.fechado = Boolean(
-    source.fechado ?? (!form.hora_abertura && !form.hora_fechamento),
-  );
+  form.fechado = Boolean(source.fechado ?? (isEditMode.value ? !hasTimes : false));
   isSubmitted.value = false;
 };
 

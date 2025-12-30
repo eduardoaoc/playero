@@ -67,6 +67,9 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import DashboardIcon from '../DashboardIcon.vue';
+import { useAlert } from '../../composables/useAlert';
+import { getStoredToken } from '../../stores/authStorage';
+import { quadrasService } from '../../services/quadrasService';
 
 const props = defineProps({
   open: {
@@ -76,6 +79,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'created']);
+
+const { showAlert } = useAlert();
 
 const form = reactive({
   nome: '',
@@ -109,10 +114,24 @@ const handleOverlayClick = () => {
   emitClose();
 };
 
+const ensureAuth = () => {
+  if (getStoredToken()) {
+    return true;
+  }
+  showAlert({
+    type: 'warning',
+    title: 'Sessao expirada',
+    message: 'Faca login novamente para cadastrar quadras.',
+    confirmText: 'Ok',
+  });
+  return false;
+};
+
 const createQuadra = async (payload) => {
-  // TODO: integrar com Axios e o endpoint POST /api/v1/quadras.
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  return payload;
+  if (!ensureAuth()) {
+    return null;
+  }
+  return quadrasService.createQuadra(payload);
 };
 
 const handleSubmit = async () => {
@@ -124,17 +143,25 @@ const handleSubmit = async () => {
 
   const payload = {
     nome: form.nome.trim(),
-    esporte: form.esporte,
-    status: form.status,
+    tipo: form.esporte,
     ativa: form.ativa,
-    observacoes: form.observacoes.trim(),
   };
 
   try {
-    await createQuadra(payload);
-    emit('created', payload);
+    const created = await createQuadra(payload);
+    if (!created) {
+      return;
+    }
+    emit('created', created);
     resetForm();
     emit('close');
+  } catch (error) {
+    showAlert({
+      type: 'error',
+      title: 'Nao foi possivel salvar',
+      message: error?.normalized?.message || 'Verifique os dados e tente novamente.',
+      confirmText: 'Ok',
+    });
   } finally {
     isSaving.value = false;
   }

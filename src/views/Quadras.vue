@@ -24,7 +24,7 @@
                 @click="openNovaQuadra"
               >
                 <DashboardIcon name="plus" />
-                + Nova Quadra
+                  Nova Quadra
               </button>
             </template>
           </SectionHeader>
@@ -95,7 +95,7 @@ const baseGeneralItems = [
   { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas' },
   { label: 'Administradores', icon: 'shield', href: '/admin/administradores' },
   { label: 'Agenda', icon: 'calendar', href: '/admin/agenda' },
-  { label: 'Eventos', icon: 'sparkle', href: '#' },
+  { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
 ];
 
 const generalItems = computed(() =>
@@ -161,23 +161,28 @@ const closeNovaQuadra = () => {
   isNovaQuadraOpen.value = false;
 };
 
-const handleQuadraCreated = (payload) => {
-  const newQuadra = normalizeQuadra({
-    id: Date.now(),
-    nome: payload?.nome,
-    esporte: payload?.esporte,
-    status: payload?.status,
-    ativa: payload?.ativa,
-    observacoes: payload?.observacoes,
-  });
-  quadras.value = [newQuadra, ...quadras.value];
+const resolveQuadraId = (quadra) =>
+  quadra?.id ?? quadra?.quadra_id ?? quadra?.uuid ?? quadra?.codigo ?? null;
+
+const handleQuadraCreated = async (created) => {
+  const quadraId = resolveQuadraId(created);
+  if (!quadraId) {
+    await loadQuadras();
+    return;
+  }
+  const newQuadra = normalizeQuadra(created, 0);
+  quadras.value = [
+    newQuadra,
+    ...quadras.value.filter((item) => String(item.id) !== String(quadraId)),
+  ];
+  await loadQuadras();
 };
 
 const mobileNav = [
   { label: 'Dashboard', icon: 'dashboard', href: '/admin' },
   { label: 'Quadras', icon: 'grid', href: '/admin/quadras', active: true },
   { label: 'Reservas', icon: 'calendar-check', href: '/admin/reservas' },
-  { label: 'Eventos', icon: 'sparkle', href: '#' },
+  { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
   { label: 'Perfil', icon: 'user', href: '#' },
 ];
 

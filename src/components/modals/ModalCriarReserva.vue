@@ -20,8 +20,14 @@
           </label>
           <label class="form-field" :class="{ 'has-error': showQuadraError }">
             <span>Quadra</span>
-            <input v-model="form.quadra" type="text" placeholder="Quadra 01" />
-            <small v-if="showQuadraError" class="form-error">Informe a quadra.</small>
+            <select v-model="form.quadra_id" :disabled="isQuadraSelectDisabled">
+              <option value="" disabled>{{ quadraPlaceholder }}</option>
+              <option v-for="quadra in quadraOptions" :key="quadra.id" :value="quadra.id">
+                {{ quadra.label }}
+              </option>
+            </select>
+            <small v-if="quadrasError" class="form-error">{{ quadrasError }}</small>
+            <small v-else-if="showQuadraError" class="form-error">Selecione a quadra.</small>
           </label>
           <label class="form-field" :class="{ 'has-error': showDataError }">
             <span>Data</span>
@@ -60,6 +66,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import DashboardIcon from '../DashboardIcon.vue';
+import { quadrasService } from '../../services/quadrasService';
 
 const props = defineProps({
   open: {
@@ -72,7 +79,7 @@ const emit = defineEmits(['close', 'created']);
 
 const form = reactive({
   cliente: '',
-  quadra: '',
+  quadra_id: '',
   data: '',
   horario: '',
   pagamento: 'PIX',
@@ -80,15 +87,49 @@ const form = reactive({
 
 const isSaving = ref(false);
 const isSubmitted = ref(false);
+const quadras = ref([]);
+const quadrasLoading = ref(false);
+const quadrasError = ref('');
 
 const showClienteError = computed(() => isSubmitted.value && !form.cliente.trim());
-const showQuadraError = computed(() => isSubmitted.value && !form.quadra.trim());
+const showQuadraError = computed(() => isSubmitted.value && !form.quadra_id);
 const showDataError = computed(() => isSubmitted.value && !form.data);
 const showHorarioError = computed(() => isSubmitted.value && !form.horario);
 
+const quadraOptions = computed(() =>
+  quadras.value.map((quadra, index) => ({
+    id: quadra.id,
+    label:
+      quadra?.name ??
+      quadra?.nome ??
+      `Quadra ${String(quadra?.id ?? index + 1).padStart(2, '0')}`,
+  })),
+);
+
+const quadraPlaceholder = computed(() => {
+  if (quadrasLoading.value) {
+    return 'Carregando quadras...';
+  }
+  if (quadrasError.value) {
+    return quadrasError.value;
+  }
+  if (!quadraOptions.value.length) {
+    return 'Nenhuma quadra dispon\u00edvel';
+  }
+  return 'Selecione a quadra';
+});
+
+const isQuadraSelectDisabled = computed(
+  () => quadrasLoading.value || Boolean(quadrasError.value) || !quadraOptions.value.length,
+);
+
+const selectedQuadra = computed(() =>
+  quadras.value.find((quadra) => String(quadra.id) === String(form.quadra_id)),
+);
+
 const resetForm = () => {
   form.cliente = '';
-  form.quadra = '';
+  form.quadra_id = '';
   form.data = '';
   form.horario = '';
   form.pagamento = 'PIX';
@@ -105,6 +146,32 @@ const handleOverlayClick = () => {
   emitClose();
 };
 
+const resolveQuadraLabel = (quadra, fallbackId) => {
+  if (quadra?.name) {
+    return quadra.name;
+  }
+  if (quadra?.nome) {
+    return quadra.nome;
+  }
+  if (fallbackId !== undefined && fallbackId !== null && fallbackId !== '') {
+    return `Quadra ${String(fallbackId).padStart(2, '0')}`;
+  }
+  return 'Quadra';
+};
+
+const loadQuadras = async () => {
+  quadrasLoading.value = true;
+  quadrasError.value = '';
+  try {
+    quadras.value = await quadrasService.listQuadras();
+  } catch (error) {
+    quadrasError.value = error?.normalized?.message || 'N\u00e3o foi poss\u00edvel carregar as quadras.';
+    quadras.value = [];
+  } finally {
+    quadrasLoading.value = false;
+  }
+};
+
 const createReserva = async (payload) => {
   // TODO: integrar com o endpoint POST /api/v1/admin/reservas.
   await new Promise((resolve) => setTimeout(resolve, 600));
@@ -118,9 +185,11 @@ const handleSubmit = async () => {
   }
   isSaving.value = true;
 
+  const quadraLabel = resolveQuadraLabel(selectedQuadra.value, form.quadra_id);
   const payload = {
     cliente: form.cliente.trim(),
-    quadra: form.quadra.trim(),
+    quadra_id: form.quadra_id,
+    quadra: quadraLabel,
     data: form.data,
     horario: form.horario,
     pagamento: form.pagamento,
@@ -139,6 +208,9 @@ const handleSubmit = async () => {
 watch(
   () => props.open,
   (isOpen) => {
+    if (isOpen && !quadras.value.length && !quadrasLoading.value) {
+      loadQuadras();
+    }
     if (!isOpen) {
       resetForm();
     }
@@ -236,7 +308,8 @@ watch(
   color: var(--dash-text, #0f172a);
 }
 
-.form-field.has-error input {
+.form-field.has-error input,
+.form-field.has-error select {
   border-color: var(--dash-danger, #ef4444);
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.12);
 }
