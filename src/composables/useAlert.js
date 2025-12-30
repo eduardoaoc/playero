@@ -35,11 +35,11 @@ const resolveTitle = (type, provided) => {
     return String(provided);
   }
   const titles = {
-    info: 'Informacao',
+    info: 'Informa\u00e7\u00e3o',
     success: 'Sucesso',
-    warning: 'Atencao',
+    warning: 'Aten\u00e7\u00e3o',
     error: 'Erro',
-    confirm: 'Confirmacao',
+    confirm: 'Confirma\u00e7\u00e3o',
   };
   return titles[type] || 'Aviso';
 };

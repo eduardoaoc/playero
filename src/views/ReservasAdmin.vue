@@ -283,7 +283,7 @@
               <span>Forma de pagamento</span>
               <select v-model="createForm.pagamento">
                 <option value="PIX">PIX</option>
-                <option value="Cartao">Cartao</option>
+                <option value="Cartao">Cart&#227;o</option>
                 <option value="---">---</option>
               </select>
             </label>
@@ -561,7 +561,7 @@ const normalizePagamento = (value) => {
     return 'PIX';
   }
   if (raw.includes('cart')) {
-    return 'Cartao';
+    return 'Cart\u00e3o';
   }
   return value;
 };
@@ -795,14 +795,15 @@ const filteredPaidReservas = computed(() => {
       return false;
     }
     const pagamento = String(reserva.pagamentoLabel || '').toLowerCase();
+    const pagamentoKey = pagamento.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if (!pagamento || pagamento === '---') {
       return false;
     }
     if (paymentFilter.value === 'pix') {
-      return pagamento.includes('pix');
+      return pagamentoKey.includes('pix');
     }
     if (paymentFilter.value === 'cartao') {
-      return pagamento.includes('cartao');
+      return pagamentoKey.includes('cartao');
     }
     return true;
   });

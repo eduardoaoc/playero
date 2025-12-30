@@ -114,9 +114,11 @@ import DateSelect from '../components/DateSelect.vue';
 import HorariosGrid from '../components/HorariosGrid.vue';
 import ReservaResumo from '../components/ReservaResumo.vue';
 import { quadrasService } from '../services/quadrasService';
-import { reservasService } from '../services/reservasService';
+import { normalizeHorarios, reservasService } from '../services/reservasService';
+import { useAgendaStore } from '../stores/useAgendaStore';
 
 const route = useRoute();
+const agendaStore = useAgendaStore();
 
 const brandName = 'Playero';
 const logoSrc = '/images/logo-text.png';
@@ -289,10 +291,6 @@ const fetchQuadras = async () => {
   }
 };
 
-const fetchDisponibilidadeRaw = async (quadraId, data) => {
-  return reservasService.getDisponibilidade(quadraId, data);
-};
-
 const loadDisponibilidade = async () => {
   if (!quadraSelecionada.value || !dataSelecionada.value) {
     horarios.value = [];
@@ -303,8 +301,25 @@ const loadDisponibilidade = async () => {
   erroDisponibilidade.value = '';
 
   try {
-    const slots = await fetchDisponibilidadeRaw(quadraSelecionada.value.id, dataSelecionada.value);
+    const dayPayload = await agendaStore.loadDay(
+      {
+        data: dataSelecionada.value,
+        date: dataSelecionada.value,
+        quadra_id: quadraSelecionada.value.id,
+      },
+      { force: true },
+    );
+    const agendaDay = dayPayload ?? agendaStore.day.value;
+    if (agendaDay?.is_closed) {
+      horarios.value = [];
+      erroDisponibilidade.value = 'Dia fechado para reservas.';
+      return;
+    }
+    const slots = normalizeHorarios(agendaDay?.slots ?? []);
     horarios.value = slots;
+    if (!slots.length) {
+      erroDisponibilidade.value = 'Sem hor\u00e1rios dispon\u00edveis para este dia.';
+    }
   } catch (error) {
     const status = error?.response?.status;
     if (status === 403) {
@@ -369,7 +384,41 @@ const buildMonthGrid = (referenceDate) => {
   return cells;
 };
 
-// Calendar uses per-day availability calls because the backend exposes only date-level availability.
+const resolveAgendaDateKey = (value) => {
+  if (!value) {
+    return '';
+  }
+  if (value instanceof Date) {
+    return formatLocalDate(value);
+  }
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.slice(0, 10);
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(raw)) {
+    const [day, month, year] = raw.split('/');
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+};
+
+const normalizeAgendaStatus = (value) => {
+  const raw = String(value || '').toLowerCase();
+  if (!raw) {
+    return 'unknown';
+  }
+  if (raw === 'closed') {
+    return 'closed';
+  }
+  if (raw === 'partial') {
+    return 'partial';
+  }
+  if (raw === 'available') {
+    return 'available';
+  }
+  return 'unknown';
+};
+
 const loadCalendarMonth = async () => {
   if (!quadraSelecionada.value) {
     calendarCells.value = [];
@@ -384,48 +433,72 @@ const loadCalendarMonth = async () => {
   calendarCells.value = monthGrid;
   loadingCalendar.value = true;
 
-  const results = await Promise.all(
-    monthGrid
-      .filter((cell) => cell.inMonth && !cell.isPast)
-      .map(async (cell) => {
-        try {
-          const slots = await fetchDisponibilidadeRaw(quadraSelecionada.value.id, cell.date);
-          return {
-            date: cell.date,
-            status: slots.length > 0 ? 'available' : 'unavailable',
-          };
-        } catch (error) {
-          return {
-            date: cell.date,
-            status: 'unknown',
-          };
-        }
-      })
-  );
+  try {
+    const year = currentMonth.value.getFullYear();
+    const month = currentMonth.value.getMonth() + 1;
+    const payload = await agendaStore.loadMonth(
+      {
+        year,
+        month,
+        ano: year,
+        mes: month,
+        quadra_id: quadraSelecionada.value.id,
+      },
+      { force: true },
+    );
 
-  if (requestId !== calendarRequestId.value) {
+    if (requestId !== calendarRequestId.value) {
+      return;
+    }
+
+    const days = payload?.days ?? [];
+    const statusByDate = new Map(
+      days
+        .map((item) => {
+          const dateKey = resolveAgendaDateKey(
+            item?.date ?? item?.data ?? item?.dia ?? item?.day,
+          );
+          if (!dateKey) {
+            return null;
+          }
+          const status = normalizeAgendaStatus(
+            item?.status ?? item?.state ?? item?.situacao ?? item?.availability,
+          );
+          return [dateKey, status];
+        })
+        .filter(Boolean),
+    );
+
+    calendarCells.value = monthGrid.map((cell) => {
+      if (!cell.inMonth) {
+        return { ...cell, status: 'outside' };
+      }
+      if (cell.isPast) {
+        return { ...cell, status: 'past' };
+      }
+      return {
+        ...cell,
+        status: statusByDate.get(cell.date) ?? 'unknown',
+      };
+    });
+  } catch (error) {
+    if (requestId !== calendarRequestId.value) {
+      return;
+    }
+    calendarCells.value = monthGrid.map((cell) => {
+      if (!cell.inMonth) {
+        return { ...cell, status: 'outside' };
+      }
+      if (cell.isPast) {
+        return { ...cell, status: 'past' };
+      }
+      return { ...cell, status: 'unknown' };
+    });
+  } finally {
     if (requestId === calendarRequestId.value) {
       loadingCalendar.value = false;
     }
-    return;
   }
-
-  const statusByDate = new Map(results.map((item) => [item.date, item.status]));
-
-  calendarCells.value = monthGrid.map((cell) => {
-    if (!cell.inMonth) {
-      return { ...cell, status: 'outside' };
-    }
-    if (cell.isPast) {
-      return { ...cell, status: 'past' };
-    }
-    return {
-      ...cell,
-      status: statusByDate.get(cell.date) ?? 'unknown',
-    };
-  });
-
-  loadingCalendar.value = false;
 };
 
 const goToPrevMonth = () => {

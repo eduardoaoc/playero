@@ -158,7 +158,7 @@ const handleSubmit = async () => {
   } catch (error) {
     showAlert({
       type: 'error',
-      title: 'Nao foi possivel salvar',
+      title: 'N\u00e3o foi poss\u00edvel salvar',
       message: error?.normalized?.message || 'Verifique os dados e tente novamente.',
       confirmText: 'Ok',
     });

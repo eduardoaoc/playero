@@ -15,6 +15,64 @@
         </section>
 
         <section class="dashboard-section">
+          <SectionHeader
+            title="Agenda"
+            subtitle="Próximos dias fechados e exceções futuras."
+          />
+
+          <div class="agenda-grid">
+            <div class="agenda-card">
+              <header class="agenda-card-header">
+                <div>
+                  <p class="agenda-card-eyebrow">Fechamentos</p>
+                  <h3 class="agenda-card-title">Próximos dias fechados</h3>
+                </div>
+              </header>
+
+              <div v-if="isAgendaMonthLoading" class="agenda-empty">Carregando agenda...</div>
+              <div v-else-if="!upcomingClosedDays.length" class="agenda-empty">
+                Nenhum fechamento programado.
+              </div>
+              <ul v-else class="agenda-list">
+                <li v-for="day in upcomingClosedDays" :key="day.key" class="agenda-item">
+                  <div class="agenda-item-meta">
+                    <span class="agenda-item-date">{{ day.label }}</span>
+                    <span class="agenda-item-subtitle">Fechado</span>
+                  </div>
+                  <span class="agenda-badge agenda-badge--danger">Fechado</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="agenda-card">
+              <header class="agenda-card-header">
+                <div>
+                  <p class="agenda-card-eyebrow">Exceções</p>
+                  <h3 class="agenda-card-title">Exceções futuras</h3>
+                </div>
+              </header>
+
+              <div v-if="isAgendaExceptionsLoading" class="agenda-empty">Carregando exceções...</div>
+              <div v-else-if="!futureExceptions.length" class="agenda-empty">
+                Nenhuma exceção futura.
+              </div>
+              <ul v-else class="agenda-list">
+                <li v-for="exception in futureExceptions" :key="exception.key" class="agenda-item">
+                  <div class="agenda-item-meta">
+                    <span class="agenda-item-date">{{ exception.label }}</span>
+                    <span class="agenda-item-subtitle">{{ exception.hours }}</span>
+                    <span v-if="exception.motivo" class="agenda-item-subtitle">
+                      {{ exception.motivo }}
+                    </span>
+                  </div>
+                  <span class="agenda-badge" :class="exception.badgeClass">{{ exception.badgeLabel }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="dashboard-section">
           <SectionHeader title="Quadras (status em tempo real)">
             <template #actions>
               <button class="dash-action dash-action--ghost" type="button">
@@ -152,11 +210,13 @@ import ModalCriarReserva from '../components/modals/ModalCriarReserva.vue';
 import ModalCriarAdmin from '../components/modals/ModalCriarAdmin.vue';
 import { useAlert } from '../composables/useAlert';
 import { useAuth } from '../stores/auth';
+import { useAgendaStore } from '../stores/useAgendaStore';
 import { adminDashboardService } from '../services/adminDashboardService';
 import { normalizeSingleQuadra, quadrasService } from '../services/quadrasService';
 
 const auth = useAuth();
 const { showAlert } = useAlert();
+const agendaStore = useAgendaStore();
 const userRole = 'super_admin';
 const isSuperAdmin = computed(() => userRole === 'super_admin');
 const canManageQuadras = computed(() =>
@@ -228,6 +288,97 @@ const quadras = ref([]);
 const eventos = ref([]);
 const isQuadrasLoading = ref(true);
 const isEventosLoading = ref(true);
+
+const agendaLoading = agendaStore.loading;
+const isAgendaMonthLoading = computed(() => agendaLoading.value.month);
+const isAgendaExceptionsLoading = computed(() => agendaLoading.value.exceptions);
+
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const resolveAgendaDateKey = (value) => {
+  if (!value) {
+    return '';
+  }
+  if (value instanceof Date) {
+    return formatLocalDate(value);
+  }
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.slice(0, 10);
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(raw)) {
+    const [day, month, year] = raw.split('/');
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+};
+
+const formatAgendaDate = (value) => {
+  const key = resolveAgendaDateKey(value);
+  if (!key) {
+    return value || '--';
+  }
+  const date = new Date(`${key}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return key;
+  }
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+};
+
+const upcomingClosedDays = computed(() => {
+  const todayKey = formatLocalDate(new Date());
+  const days = agendaStore.month.value?.days ?? [];
+  return days
+    .map((item, index) => {
+      const dateKey = resolveAgendaDateKey(
+        item?.date ?? item?.data ?? item?.dia ?? item?.day,
+      );
+      const status = String(item?.status ?? item?.state ?? '').toLowerCase();
+      if (!dateKey || status !== 'closed' || dateKey < todayKey) {
+        return null;
+      }
+      return {
+        key: `${dateKey}-${index}`,
+        date: dateKey,
+        label: formatAgendaDate(dateKey),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
+});
+
+const futureExceptions = computed(() => {
+  const todayKey = formatLocalDate(new Date());
+  const items = agendaStore.exceptions.value ?? [];
+  return items
+    .map((exception, index) => {
+      const dateKey = resolveAgendaDateKey(exception?.data ?? exception?.date);
+      if (!dateKey || dateKey < todayKey) {
+        return null;
+      }
+      const fechado = Boolean(exception?.fechado);
+      const horaAbertura = exception?.hora_abertura ?? '--:--';
+      const horaFechamento = exception?.hora_fechamento ?? '--:--';
+      return {
+        key: `${dateKey}-${exception?.id ?? index}`,
+        date: dateKey,
+        label: formatAgendaDate(dateKey),
+        hours: fechado ? 'Fechado o dia todo' : `${horaAbertura} - ${horaFechamento}`,
+        motivo: exception?.motivo ?? '',
+        badgeLabel: fechado ? 'Fechado' : 'Hor\u00e1rio especial',
+        badgeClass: fechado ? 'agenda-badge--danger' : 'agenda-badge--warning',
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
+});
 
 const infoCards = [
   {
@@ -541,9 +692,20 @@ const loadQuadras = async () => {
   }
 };
 
+const loadAgendaHighlights = async () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  await Promise.allSettled([
+    agendaStore.loadMonth({ year, month, ano: year, mes: month }, { force: true }),
+    agendaStore.loadExceptions(),
+  ]);
+};
+
 onMounted(() => {
   loadDashboard();
   loadQuadras();
+  loadAgendaHighlights();
 });
 </script>
 
@@ -622,6 +784,109 @@ onMounted(() => {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
+}
+
+.agenda-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.agenda-card {
+  background: var(--dash-surface, #ffffff);
+  border: 1px solid var(--dash-border, #e6e9ef);
+  border-radius: var(--dash-radius-lg, 24px);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--dash-shadow, 0 20px 50px -35px rgba(15, 23, 42, 0.35));
+}
+
+.agenda-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agenda-card-eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dash-muted, #64748b);
+  font-weight: 700;
+}
+
+.agenda-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dash-text, #0f172a);
+}
+
+.agenda-empty {
+  font-size: 0.85rem;
+  color: var(--dash-muted, #64748b);
+}
+
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agenda-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--dash-border, #e6e9ef);
+  background: var(--dash-surface-soft, #f6f8fb);
+}
+
+.agenda-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agenda-item-date {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--dash-text, #0f172a);
+}
+
+.agenda-item-subtitle {
+  font-size: 0.78rem;
+  color: var(--dash-muted, #64748b);
+}
+
+.agenda-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--dash-surface, #ffffff);
+  border: 1px solid var(--dash-border, #e6e9ef);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dash-muted, #64748b);
+}
+
+.agenda-badge--danger {
+  background: var(--dash-danger-soft, rgba(239, 68, 68, 0.18));
+  color: var(--dash-danger, #ef4444);
+  border-color: transparent;
+}
+
+.agenda-badge--warning {
+  background: var(--dash-warning-soft, rgba(245, 158, 11, 0.2));
+  color: var(--dash-warning, #f59e0b);
+  border-color: transparent;
 }
 
 .info-wrap {
@@ -711,7 +976,8 @@ onMounted(() => {
 @media (max-width: 1200px) {
   .dashboard-kpi-grid,
   .dashboard-quadra-grid,
-  .dashboard-event-grid {
+  .dashboard-event-grid,
+  .agenda-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -740,6 +1006,7 @@ onMounted(() => {
   .dashboard-kpi-grid,
   .dashboard-quadra-grid,
   .dashboard-event-grid,
+  .agenda-grid,
   .info-grid {
     grid-template-columns: 1fr;
   }

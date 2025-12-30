@@ -23,7 +23,7 @@
       v-else-if="quadras.length === 0"
       class="rounded-2xl border border-white/10 bg-[#1A1A1F] px-4 py-3 text-sm text-white/70"
     >
-      Nenhuma quadra disponivel no momento.
+      Nenhuma quadra dispon&#237;vel no momento.
     </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2">

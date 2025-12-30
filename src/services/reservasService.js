@@ -10,6 +10,31 @@ export const normalizeHorarios = (payload) => {
     (Array.isArray(payload?.data?.horarios) && payload.data.horarios) ||
     [];
 
+  const isTruthy = (value) =>
+    value === true ||
+    value === 1 ||
+    String(value).toLowerCase() === 'true' ||
+    String(value) === '1';
+
+  const resolveDisponivel = (item) => {
+    if (item?.disponivel !== undefined) {
+      return isTruthy(item?.disponivel);
+    }
+    if (item?.available !== undefined) {
+      return isTruthy(item?.available);
+    }
+    if (item?.is_available !== undefined) {
+      return isTruthy(item?.is_available);
+    }
+    if (item?.isAvailable !== undefined) {
+      return isTruthy(item?.isAvailable);
+    }
+    if (item?.status !== undefined) {
+      return ['disponivel', 'available'].includes(String(item?.status).toLowerCase());
+    }
+    return true;
+  };
+
   return raw
     .map((item, index) => {
       if (typeof item === 'string') {
@@ -24,12 +49,7 @@ export const normalizeHorarios = (payload) => {
         id: item?.id ?? `${item?.hora_inicio ?? item?.inicio ?? item?.start ?? index}-${index}`,
         horaInicio: item?.hora_inicio ?? item?.inicio ?? item?.start ?? item?.hora ?? '',
         horaFim: item?.hora_fim ?? item?.fim ?? item?.end ?? '',
-        disponivel:
-          item?.disponivel === undefined
-            ? true
-            : item?.disponivel === true ||
-              String(item?.disponivel).toLowerCase() === 'true' ||
-              String(item?.status).toLowerCase() === 'disponivel',
+        disponivel: resolveDisponivel(item),
       };
     })
     .filter((item) => item.horaInicio && item.disponivel);

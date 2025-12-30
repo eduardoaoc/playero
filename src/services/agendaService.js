@@ -27,6 +27,14 @@ export const agendaService = {
     const response = await apiClient.delete(`/api/v1/agenda/exceptions/${id}`);
     return unwrap(response);
   },
+  async getDay(params) {
+    const response = await apiClient.get('/api/v1/agenda/day', { params });
+    return unwrap(response);
+  },
+  async getMonth(params) {
+    const response = await apiClient.get('/api/v1/agenda/month', { params });
+    return unwrap(response);
+  },
   async getBlockings() {
     const response = await apiClient.get('/api/v1/agenda/blockings');
     return unwrap(response);

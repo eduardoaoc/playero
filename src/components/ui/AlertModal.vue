@@ -61,7 +61,7 @@ const messageId = 'alert-modal-message';
 const typeLabels = {
   info: 'Info',
   success: 'Sucesso',
-  warning: 'Atencao',
+  warning: 'Aten\u00e7\u00e3o',
   error: 'Erro',
   confirm: 'Confirmar',
 };

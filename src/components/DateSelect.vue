@@ -87,8 +87,12 @@
           Dispon&#237;vel
         </div>
         <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+          Parcial
+        </div>
+        <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-rose-400"></span>
-          Indispon&#237;vel
+          Fechado
         </div>
         <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-white/30"></span>
@@ -196,7 +200,10 @@ const statusPillClass = (cell) => {
   if (cell.status === 'available') {
     return 'bg-emerald-400';
   }
-  if (cell.status === 'unavailable') {
+  if (cell.status === 'partial') {
+    return 'bg-amber-400';
+  }
+  if (cell.status === 'closed') {
     return 'bg-rose-400';
   }
   if (cell.status === 'loading') {

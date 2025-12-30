@@ -29,7 +29,7 @@
             <span>Nova senha (opcional)</span>
             <input v-model="form.password" type="password" placeholder="Deixe vazio para manter" />
             <small v-if="showPasswordError" class="form-error">
-              Informe a senha e a confirmacao.
+              Informe a senha e a confirma&#231;&#227;o.
             </small>
           </label>
 
@@ -57,7 +57,7 @@
           </button>
           <button class="dash-action dash-action--primary" type="submit" :disabled="isSaving">
             <span v-if="isSaving">Salvando...</span>
-            <span v-else>Salvar alteracoes</span>
+            <span v-else>Salvar altera&#231;&#245;es</span>
           </button>
         </div>
       </form>

@@ -334,8 +334,10 @@ import ExcecaoHorarioModal from '../components/modals/ExcecaoHorarioModal.vue';
 import { agendaService } from '../services/agendaService';
 import { useAlert } from '../composables/useAlert';
 import { useAuth } from '../stores/auth';
+import { useAgendaStore } from '../stores/useAgendaStore';
 
 const auth = useAuth();
+const agendaStore = useAgendaStore();
 const { showAlert } = useAlert();
 const userRole = 'admin';
 const isSuperAdmin = computed(() => userRole === 'super_admin');
@@ -388,15 +390,10 @@ const weekDays = [
   { label: 'Dom', value: 7 },
 ];
 
-const isConfigLoading = ref(false);
 const isConfigSaving = ref(false);
-const agendaConfig = ref({
-  hora_abertura: '08:00',
-  hora_fechamento: '22:00',
-  duracao_reserva_minutos: 60,
-  dias_semana_ativos: [1, 2, 3, 4, 5, 6],
-  timezone: 'America/Sao_Paulo',
-});
+const agendaConfig = agendaStore.config;
+const agendaLoading = agendaStore.loading;
+const isConfigLoading = computed(() => agendaLoading.value.config);
 
 const isConfigModalOpen = ref(false);
 const isHorarioModalOpen = ref(false);
@@ -413,8 +410,8 @@ const configForm = reactive({
 
 const isConfigSubmitted = ref(false);
 
-const exceptions = ref([]);
-const exceptionsLoading = ref(false);
+const exceptions = agendaStore.exceptions;
+const exceptionsLoading = computed(() => agendaLoading.value.exceptions);
 const selectedException = ref(null);
 const isExceptionEditing = ref(false);
 const exceptionModalMode = computed(() => (isExceptionEditing.value ? 'edit' : 'create'));
@@ -509,43 +506,6 @@ const handleApiError = (error, fallback, silentStatuses = []) => {
   }
 };
 
-const normalizeConfig = (payload) => {
-  const data = payload?.data ?? payload ?? {};
-  const rawDays = data.dias_semana_ativos ?? data.diasSemanaAtivos;
-  const parsedDays = Array.isArray(rawDays)
-    ? rawDays
-        .map((day) => Number(day))
-        .filter((day) => !Number.isNaN(day) && day > 0)
-    : [];
-  return {
-    hora_abertura: data.hora_abertura ?? data.horaAbertura ?? '08:00',
-    hora_fechamento: data.hora_fechamento ?? data.horaFechamento ?? '22:00',
-    duracao_reserva_minutos:
-      data.duracao_reserva_minutos ?? data.duracaoReservaMinutos ?? 60,
-    dias_semana_ativos: parsedDays.length ? parsedDays : [1, 2, 3, 4, 5, 6],
-    timezone: data.timezone ?? 'America/Sao_Paulo',
-  };
-};
-
-const normalizeException = (exception, index = 0) => {
-  const horaAbertura = exception?.hora_abertura ?? exception?.horaAbertura ?? null;
-  const horaFechamento = exception?.hora_fechamento ?? exception?.horaFechamento ?? null;
-  const dataValue = exception?.data ?? exception?.date ?? '';
-  const motivo = exception?.motivo ?? exception?.descricao ?? '';
-  const fechado = Boolean(
-    exception?.fechado ?? (!horaAbertura && !horaFechamento),
-  );
-
-  return {
-    id: exception?.id ?? exception?.uuid ?? index,
-    data: typeof dataValue === 'string' ? dataValue.slice(0, 10) : dataValue,
-    hora_abertura: horaAbertura,
-    hora_fechamento: horaFechamento,
-    motivo,
-    fechado,
-  };
-};
-
 const resolveQuadraLabel = (blocking) => {
   const quadraId = blocking?.quadra_id ?? blocking?.quadraId ?? blocking?.quadra?.id;
   const name =
@@ -635,8 +595,7 @@ const closeBlockingModal = () => {
 const persistConfig = async (payload) => {
   isConfigSaving.value = true;
   try {
-    const response = await agendaService.updateConfig(payload);
-    agendaConfig.value = normalizeConfig(response);
+    await agendaStore.updateConfig(payload);
     return true;
   } catch (error) {
     handleApiError(error, 'N\u00e3o foi poss\u00edvel salvar a configura\u00e7\u00e3o.');
@@ -695,15 +654,9 @@ const handleExceptionSave = async (payload) => {
     };
 
     if (isExceptionEditing.value && selectedException.value) {
-      const response = await agendaService.updateException(selectedException.value.id, request);
-      const updated = normalizeException(response?.data ?? response, selectedException.value.id);
-      exceptions.value = exceptions.value.map((item) =>
-        item.id === selectedException.value.id ? { ...item, ...updated } : item,
-      );
+      await agendaStore.updateException(selectedException.value.id, request);
     } else {
-      const response = await agendaService.createException(request);
-      const created = normalizeException(response?.data ?? response, exceptions.value.length + 1);
-      exceptions.value = [created, ...exceptions.value];
+      await agendaStore.createException(request);
     }
     closeExceptionModal();
   } catch (error) {
@@ -718,8 +671,7 @@ const handleDeleteException = async (exception) => {
     return;
   }
   try {
-    await agendaService.deleteException(exception.id);
-    exceptions.value = exceptions.value.filter((item) => item.id !== exception.id);
+    await agendaStore.deleteException(exception.id);
   } catch (error) {
     handleApiError(error, 'N\u00e3o foi poss\u00edvel excluir a exce\u00e7\u00e3o.');
   }
@@ -786,14 +738,10 @@ const loadConfig = async () => {
   if (!canAccess.value) {
     return;
   }
-  isConfigLoading.value = true;
   try {
-    const response = await agendaService.getConfig();
-    agendaConfig.value = normalizeConfig(response);
+    await agendaStore.loadConfig();
   } catch (error) {
     handleApiError(error, 'N\u00e3o foi poss\u00edvel carregar a configura\u00e7\u00e3o.', [404]);
-  } finally {
-    isConfigLoading.value = false;
   }
 };
 
@@ -801,15 +749,10 @@ const loadExceptions = async () => {
   if (!canAccess.value) {
     return;
   }
-  exceptionsLoading.value = true;
   try {
-    const response = await agendaService.listExceptions();
-    const data = response?.data ?? response ?? [];
-    exceptions.value = Array.isArray(data) ? data.map(normalizeException) : [];
+    await agendaStore.loadExceptions();
   } catch (error) {
     handleApiError(error, 'N\u00e3o foi poss\u00edvel carregar as exce\u00e7\u00f5es.', [404]);
-  } finally {
-    exceptionsLoading.value = false;
   }
 };
 

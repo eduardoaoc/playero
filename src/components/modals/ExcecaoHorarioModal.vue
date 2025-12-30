@@ -117,13 +117,12 @@ const syncForm = () => {
   const source = props.initialData || {};
   const horaAbertura = source.hora_abertura ?? '';
   const horaFechamento = source.hora_fechamento ?? '';
-  const hasTimes = Boolean(horaAbertura || horaFechamento);
 
   form.data = source.data ?? '';
   form.hora_abertura = horaAbertura;
   form.hora_fechamento = horaFechamento;
   form.motivo = source.motivo ?? '';
-  form.fechado = Boolean(source.fechado ?? (isEditMode.value ? !hasTimes : false));
+  form.fechado = Boolean(source.fechado);
   isSubmitted.value = false;
 };
 

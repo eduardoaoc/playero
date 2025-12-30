@@ -36,6 +36,7 @@
 
             <div
               class="login-panel rounded-2xl border border-white/10 bg-[#2b2426]/80 p-7 shadow-[0_35px_100px_-50px_rgba(0,0,0,0.9)] backdrop-blur-lg sm:p-8 animate-fade-up"
+              :class="{ 'login-panel--compact': !isRegistering }"
               style="animation-delay: 0.08s"
             >
               <transition name="login-panel-fade" mode="out-in">
@@ -1024,6 +1025,7 @@ const handleSubmit = async () => {
   width: 100%;
   margin-bottom: 0.9rem;
   padding: 1.5rem 1.5rem 2.15rem;
+  transition: width 0.28s ease, max-width 0.28s ease, min-width 0.28s ease;
 }
 
 @media (min-width: 640px) {
@@ -1041,6 +1043,12 @@ const handleSubmit = async () => {
     margin-left: -0.15rem;
     margin-bottom: 1.35rem;
     padding: 2.2rem 2.2rem 2.75rem;
+  }
+
+  .login-panel--compact {
+    width: 480px;
+    max-width: 480px;
+    min-width: 480px;
   }
 }
 
