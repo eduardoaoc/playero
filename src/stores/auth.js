@@ -7,6 +7,7 @@ const state = reactive({
   user: null,
   initialized: false,
   loading: false,
+  loaded: false,
 });
 
 let listenerBound = false;
@@ -25,14 +26,29 @@ const bindLogoutListener = () => {
 const resolveToken = (payload) =>
   payload?.token ?? payload?.data?.token ?? payload?.access_token ?? payload?.data?.access_token ?? '';
 
+const normalizeRole = (value) => {
+  const raw = (value ?? '').toString().trim().toLowerCase();
+  if (!raw) {
+    return '';
+  }
+  if (raw === 'user' || raw === 'client' || raw === 'cliente') {
+    return 'cliente';
+  }
+  if (raw === 'super-admin' || raw === 'superadmin') {
+    return 'super_admin';
+  }
+  return raw;
+};
+
 export const useAuth = () => {
   bindLogoutListener();
 
   const isAuthenticated = computed(() => Boolean(state.token));
   const user = computed(() => state.user);
-  const role = computed(() => state.user?.role ?? state.user?.perfil ?? state.user?.tipo ?? '');
+  const role = computed(() => normalizeRole(state.user?.role ?? state.user?.perfil ?? state.user?.tipo ?? ''));
   const isLoading = computed(() => state.loading);
   const isInitialized = computed(() => state.initialized);
+  const isLoaded = computed(() => state.loaded);
 
   const init = async () => {
     if (state.initialized) {
@@ -41,12 +57,15 @@ export const useAuth = () => {
     state.token = getStoredToken();
     state.user = getStoredUser();
     state.initialized = true;
+    state.loaded = Boolean(state.user || !state.token);
 
     if (state.token && !state.user) {
       try {
         await me();
       } catch {
         clearStoredSession();
+      } finally {
+        state.loaded = true;
       }
     }
   };
@@ -58,8 +77,14 @@ export const useAuth = () => {
     setStoredUser(state.user);
   };
 
+  const setUser = (userPayload) => {
+    state.user = userPayload || null;
+    setStoredUser(state.user);
+  };
+
   const login = async (email, password) => {
     state.loading = true;
+    state.loaded = false;
     try {
       const payload = await authService.login(email, password);
       const token = resolveToken(payload);
@@ -78,6 +103,7 @@ export const useAuth = () => {
     const payload = await authService.me();
     const userPayload = payload?.data ?? payload?.user ?? payload;
     setSession(state.token, userPayload);
+    state.loaded = true;
     return state.user;
   };
 
@@ -99,6 +125,7 @@ export const useAuth = () => {
       clearStoredSession();
       state.token = '';
       state.user = null;
+      state.loaded = true;
     }
   };
 
@@ -109,10 +136,12 @@ export const useAuth = () => {
     role,
     isLoading,
     isInitialized,
+    isLoaded,
     init,
     login,
     me,
     refresh,
     logout,
+    setUser,
   };
 };

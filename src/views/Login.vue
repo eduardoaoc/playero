@@ -668,6 +668,32 @@ const getValidationMessage = (error) => {
   return error?.normalized?.message || '';
 };
 
+const normalizeRole = (value) => {
+  const raw = (value ?? '').toString().trim().toLowerCase();
+  if (!raw) {
+    return '';
+  }
+  if (raw === 'user' || raw === 'client' || raw === 'cliente') {
+    return 'cliente';
+  }
+  if (raw === 'super-admin' || raw === 'superadmin') {
+    return 'super_admin';
+  }
+  return raw;
+};
+
+const isAdminRole = (value) => value === 'admin' || value === 'super_admin';
+
+const normalizeRedirect = (value) => {
+  if (!value || value === '/login') {
+    return '';
+  }
+  if (value.startsWith('/app')) {
+    return value.replace(/^\/app/, '/cliente');
+  }
+  return value;
+};
+
 const handleRegister = async () => {
   if (isRegisterSubmitting.value) {
     return;
@@ -737,14 +763,30 @@ const handleSubmit = async () => {
   try {
     await auth.login(email.value, password.value);
 
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '';
-    if (redirect && redirect !== '/login') {
+    const rawRedirect = typeof route.query.redirect === 'string' ? route.query.redirect : '';
+    const redirect = normalizeRedirect(rawRedirect);
+    const role = normalizeRole(auth.role.value);
+
+    if (redirect) {
+      if (role === 'cliente' && redirect.startsWith('/admin')) {
+        router.push('/cliente/dashboard');
+        return;
+      }
+      if (isAdminRole(role) && redirect.startsWith('/cliente')) {
+        router.push('/admin/dashboard');
+        return;
+      }
       router.push(redirect);
       return;
     }
 
-    if (auth.role.value && /admin/i.test(auth.role.value)) {
-      router.push('/admin');
+    if (role === 'cliente') {
+      router.push('/cliente/dashboard');
+      return;
+    }
+
+    if (isAdminRole(role)) {
+      router.push('/admin/dashboard');
       return;
     }
 

@@ -1,5 +1,5 @@
 ﻿<template>
-  <aside class="dashboard-sidebar">
+  <aside class="dashboard-sidebar" :class="{ 'dashboard-sidebar--client': mode === 'client' }">
     <div class="sidebar-brand">
       <div class="sidebar-logo">
         <img src="/images/logo-text.png" alt="Playero" class="sidebar-logo-image" />
@@ -7,7 +7,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <p class="sidebar-section">{{ generalLabel }}</p>
+      <p class="sidebar-section">{{ resolvedGeneralLabel }}</p>
       <a
         v-for="item in generalItems"
         :key="item.label"
@@ -21,7 +21,7 @@
         <span>{{ item.label }}</span>
       </a>
 
-      <p class="sidebar-section">{{ supportLabel }}</p>
+      <p class="sidebar-section">{{ resolvedSupportLabel }}</p>
       <a
         v-for="item in supportItems"
         :key="item.label"
@@ -67,11 +67,16 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuth } from '../stores/auth';
 import DashboardIcon from './DashboardIcon.vue';
 
-defineProps({
+const props = defineProps({
+  mode: {
+    type: String,
+    default: 'admin',
+  },
   brand: {
     type: Object,
     default: () => ({
@@ -102,19 +107,35 @@ defineProps({
 });
 
 const router = useRouter();
+const auth = useAuth();
 const isMenuOpen = ref(false);
 const userMenuRef = ref(null);
 
-const logout = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('token');
+const resolvedGeneralLabel = computed(() => {
+  if (props.mode === 'client' && props.generalLabel === 'GERAL') {
+    return 'CLIENTE';
   }
-  router.push('/login');
+  return props.generalLabel;
+});
+
+const resolvedSupportLabel = computed(() => {
+  if (props.mode === 'client' && props.supportLabel === 'SUPORTE') {
+    return 'SUPORTE';
+  }
+  return props.supportLabel;
+});
+
+const logout = async () => {
+  try {
+    await auth.logout();
+  } finally {
+    router.push('/login');
+  }
 };
 
-const handleLogout = () => {
+const handleLogout = async () => {
   isMenuOpen.value = false;
-  logout();
+  await logout();
 };
 
 const toggleMenu = () => {
@@ -329,4 +350,3 @@ onBeforeUnmount(() => {
   }
 }
 </style>
-
