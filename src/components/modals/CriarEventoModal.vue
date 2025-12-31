@@ -110,6 +110,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import DashboardIcon from '../DashboardIcon.vue';
+import { eventsService } from '../../services/eventsService';
 
 const props = defineProps({
   open: {
@@ -204,10 +205,50 @@ const handleOverlayClick = () => {
   emitClose();
 };
 
+const normalizeLabel = (value) =>
+  String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const mapTipoToApi = (tipo) => {
+  const normalized = normalizeLabel(tipo);
+  if (normalized.includes('vip')) {
+    return 'vip';
+  }
+  if (normalized.includes('anivers')) {
+    return 'aniversario';
+  }
+  if (normalized.includes('corpor')) {
+    return 'corporativo';
+  }
+  if (normalized.includes('gastron')) {
+    return 'gastronomico';
+  }
+  if (normalized.includes('musica') || normalized.includes('dj') || normalized.includes('cantor')) {
+    return 'musica_ao_vivo';
+  }
+  if (normalized.includes('torneio')) {
+    return 'torneio';
+  }
+  return 'outro';
+};
+
+const mapStatusToApi = (status) => {
+  const normalized = normalizeLabel(status);
+  if (normalized.includes('cancel')) {
+    return 'cancelado';
+  }
+  if (normalized.includes('encerr') || normalized.includes('inativ')) {
+    return 'inativo';
+  }
+  return 'ativo';
+};
+
 const createEvento = async (payload) => {
-  // TODO: integrar com o endpoint POST /api/v1/admin/eventos.
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  return payload;
+  return eventsService.createEvent(payload);
 };
 
 const handleSubmit = async () => {
@@ -227,26 +268,24 @@ const handleSubmit = async () => {
 
   isSaving.value = true;
   const capacidadeMaxima = form.capacidade ? Number(form.capacidade) : null;
-  const valorEvento = form.pago && form.valor ? Number(form.valor) : null;
 
   const payload = {
-    nome: form.nome.trim(),
-    tipo: form.tipo,
-    data: form.data,
-    hora_inicio: form.hora_inicio,
-    hora_fim: form.hora_fim,
-    local: form.local,
-    capacidade_maxima: Number.isNaN(capacidadeMaxima) ? null : capacidadeMaxima,
-    descricao: form.descricao.trim(),
-    pago: form.pago,
-    valor: Number.isNaN(valorEvento) ? null : valorEvento,
-    privacidade: form.privacidade,
-    status: form.status,
+    name: form.nome.trim(),
+    type: mapTipoToApi(form.tipo),
+    date: form.data,
+    start_time: form.hora_inicio,
+    end_time: form.hora_fim,
+    location: form.local,
+    max_people: Number.isNaN(capacidadeMaxima) ? null : capacidadeMaxima,
+    description: form.descricao.trim() || null,
+    is_paid: form.pago,
+    visibility: form.privacidade,
+    status: mapStatusToApi(form.status),
   };
 
   try {
-    await createEvento(payload);
-    emit('created', payload);
+    const created = await createEvento(payload);
+    emit('created', created ?? payload);
     resetForm();
     emit('close');
   } finally {

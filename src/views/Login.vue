@@ -512,6 +512,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '../stores/auth';
+import { usersService } from '../services/usersService';
 
 const router = useRouter();
 const route = useRoute();
@@ -667,7 +668,7 @@ const getValidationMessage = (error) => {
   return error?.normalized?.message || '';
 };
 
-const handleRegister = () => {
+const handleRegister = async () => {
   if (isRegisterSubmitting.value) {
     return;
   }
@@ -690,6 +691,38 @@ const handleRegister = () => {
 
   if (registerPasswordMismatch.value) {
     setRegisterError('As senhas não conferem.', 'Verifique se as senhas digitadas são iguais.');
+    return;
+  }
+
+  isRegisterSubmitting.value = true;
+  const payload = {
+    name: registerFirstName.value.trim(),
+    last_name: registerLastName.value.trim(),
+    email: registerEmail.value.trim(),
+    email_confirmation: registerEmailConfirm.value.trim(),
+    password: registerPassword.value,
+    password_confirmation: registerPasswordConfirm.value,
+    accept_terms: Boolean(registerTermsAccepted.value),
+  };
+
+  try {
+    await usersService.createUser(payload);
+    email.value = registerEmail.value.trim();
+    switchToLogin();
+  } catch (error) {
+    const status = error?.response?.status;
+    if (status === 422) {
+      const validationMessage = getValidationMessage(error);
+      setRegisterError('Dados inválidos.', validationMessage || 'Verifique seus dados e tente novamente.');
+      return;
+    }
+    if (error?.normalized?.message) {
+      setRegisterError(error.normalized.message, 'Verifique seus dados e tente novamente.');
+      return;
+    }
+    setRegisterError('Não foi possível criar a conta.', 'Verifique sua conexão e tente novamente.');
+  } finally {
+    isRegisterSubmitting.value = false;
   }
 };
 

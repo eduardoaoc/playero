@@ -116,6 +116,7 @@ import DashboardIcon from '../components/DashboardIcon.vue';
 import EmptyStateCard from '../components/EmptyStateCard.vue';
 import CriarEventoModal from '../components/modals/CriarEventoModal.vue';
 import { useAuth } from '../stores/auth';
+import { eventsService } from '../services/eventsService';
 
 const auth = useAuth();
 const userRole = 'admin';
@@ -173,10 +174,28 @@ const normalizeStatus = (value) => {
   if (raw.includes('cancel')) {
     return 'cancelado';
   }
-  if (raw.includes('encerr')) {
+  if (raw.includes('encerr') || raw.includes('inativ')) {
     return 'encerrado';
   }
   return 'ativo';
+};
+
+const tipoLabelMap = {
+  aniversario: 'Aniversario',
+  vip: 'Reserva de Area VIP',
+  corporativo: 'Evento corporativo',
+  gastronomico: 'Evento gastronomico',
+  musica_ao_vivo: 'Musica ao vivo / cantores / DJ',
+  torneio: 'Torneio',
+  outro: 'Evento personalizado',
+};
+
+const resolveTipoLabel = (value) => {
+  if (!value) {
+    return 'Evento personalizado';
+  }
+  const key = String(value).toLowerCase();
+  return tipoLabelMap[key] ?? value;
 };
 
 const normalizeEvento = (evento, index = 0) => {
@@ -187,7 +206,7 @@ const normalizeEvento = (evento, index = 0) => {
   return {
     id: evento.id ?? evento.uuid ?? index,
     nome: nome || `Evento ${String(index + 1).padStart(2, '0')}`,
-    tipo: evento.tipo ?? evento.type ?? 'Evento personalizado',
+    tipo: resolveTipoLabel(evento.tipo ?? evento.type),
     data: evento.data ?? evento.data_evento ?? evento.dataEvento ?? evento.date ?? '',
     horaInicio:
       evento.hora_inicio ?? evento.horaInicio ?? evento.horaInicial ?? evento.start_time ?? '',
@@ -196,9 +215,9 @@ const normalizeEvento = (evento, index = 0) => {
     status: normalizeStatus(evento.status ?? evento.status_inicial ?? 'ativo'),
     pago: Boolean(evento.pago ?? evento.is_paid ?? false),
     valor: evento.valor ?? evento.value ?? null,
-    privacidade: evento.privacidade ?? evento.privacy ?? 'publico',
-    capacidade: evento.capacidade_maxima ?? evento.capacidade ?? null,
-    descricao: evento.descricao ?? evento.observacoes ?? '',
+    privacidade: evento.privacidade ?? evento.privacy ?? evento.visibility ?? 'publico',
+    capacidade: evento.capacidade_maxima ?? evento.capacidade ?? evento.max_people ?? null,
+    descricao: evento.descricao ?? evento.observacoes ?? evento.description ?? '',
   };
 };
 
@@ -243,7 +262,7 @@ const closeCreateModal = () => {
   isCreateModalOpen.value = false;
 };
 
-const handleEventoCreated = (payload) => {
+const handleEventoCreated = async (payload) => {
   if (!payload) {
     return;
   }
@@ -251,6 +270,7 @@ const handleEventoCreated = (payload) => {
   if (normalized) {
     eventos.value = [normalized, ...eventos.value];
   }
+  await loadEventos();
 };
 
 const handleViewEvento = (evento) => {
@@ -276,14 +296,56 @@ const handleCancelEvento = (evento) => {
   );
 };
 
+const resolveMonthKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+const resolveCalendarMonths = () => {
+  const base = new Date();
+  const months = [];
+  for (let offset = 0; offset < 12; offset += 1) {
+    const candidate = new Date(base.getFullYear(), base.getMonth() + offset, 1);
+    months.push(resolveMonthKey(candidate));
+  }
+  return months;
+};
+
+const mergeUniqueEventos = (items) => {
+  const unique = new Map();
+  items.forEach((item, index) => {
+    if (!item) {
+      return;
+    }
+    const key = item.id ?? `${item.date ?? ''}-${item.name ?? item.nome ?? 'evento'}-${index}`;
+    if (!unique.has(key)) {
+      unique.set(key, item);
+    }
+  });
+  return Array.from(unique.values());
+};
+
 const loadEventos = async () => {
   if (!canAccess.value) {
     return;
   }
   isEventosLoading.value = true;
   try {
-    const data = [];
-    eventos.value = data.map(normalizeEvento).filter(Boolean);
+    const payload = await eventsService.listEvents();
+    if (payload.length) {
+      eventos.value = payload.map(normalizeEvento).filter(Boolean);
+      return;
+    }
+
+    const months = resolveCalendarMonths();
+    const responses = await Promise.all(
+      months.map((month) => eventsService.listCalendar({ month })),
+    );
+    const merged = mergeUniqueEventos(responses.flat());
+    eventos.value = merged.map(normalizeEvento).filter(Boolean);
+  } catch (error) {
+    eventos.value = [];
   } finally {
     isEventosLoading.value = false;
   }
