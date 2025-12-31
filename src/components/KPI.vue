@@ -1,13 +1,13 @@
 ﻿<template>
   <div class="kpi-card">
-    <div class="kpi-head">
-      <p class="kpi-title">{{ title }}</p>
-      <span class="kpi-icon">
-        <DashboardIcon :name="icon" />
-      </span>
-    </div>
-    <div class="kpi-value">{{ value }}</div>
-    <p class="kpi-meta">{{ meta }}</p>
+    <span class="kpi-icon">
+      <DashboardIcon :name="icon" :size="16" />
+    </span>
+    <span class="kpi-text">
+      <span class="kpi-title">{{ title }}</span>
+      <span class="kpi-meta">{{ meta }}</span>
+    </span>
+    <span class="kpi-value">{{ value }}</span>
   </div>
 </template>
 
@@ -38,32 +38,27 @@ defineProps({
 .kpi-card {
   background: var(--dash-surface, #ffffff);
   border: 1px solid var(--dash-border, #e6e9ef);
-  border-radius: var(--dash-radius, 18px);
-  padding: 16px 18px;
+  border-radius: 999px;
+  padding: 8px 12px;
   box-shadow: var(--dash-shadow, 0 18px 40px -32px rgba(15, 23, 42, 0.35));
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.kpi-head {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .kpi-title {
-  margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--dash-muted, #64748b);
+  color: var(--dash-text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kpi-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
   border: 1px solid var(--dash-border, #e6e9ef);
@@ -71,17 +66,37 @@ defineProps({
   background: var(--dash-surface-soft, #f6f8fb);
 }
 
+.kpi-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .kpi-value {
-  font-size: 1.6rem;
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
   font-weight: 700;
-  line-height: 1.1;
   color: var(--dash-text, #0f172a);
+  background: var(--dash-surface-soft, #f6f8fb);
+  border: 1px solid var(--dash-border, #e6e9ef);
+  flex-shrink: 0;
 }
 
 .kpi-meta {
-  margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--dash-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+  .kpi-meta {
+    display: none;
+  }
 }
 </style>
 

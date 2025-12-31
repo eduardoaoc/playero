@@ -82,6 +82,12 @@ export const useAuth = () => {
     setStoredUser(state.user);
   };
 
+  const setToken = (token) => {
+    state.token = token || '';
+    setStoredToken(state.token);
+    state.loaded = true;
+  };
+
   const login = async (email, password) => {
     state.loading = true;
     state.loaded = false;
@@ -142,6 +148,7 @@ export const useAuth = () => {
     me,
     refresh,
     logout,
+    setToken,
     setUser,
   };
 };

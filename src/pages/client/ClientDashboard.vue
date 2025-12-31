@@ -32,14 +32,14 @@
             type="button"
             @click="goToKpi(kpi)"
           >
-            <div class="client-kpi-top">
+            <span class="client-kpi-icon">
+              <DashboardIcon :name="kpi.icon" :size="16" />
+            </span>
+            <span class="client-kpi-text">
               <span class="client-kpi-label">{{ kpi.label }}</span>
-              <span class="client-kpi-icon">
-                <DashboardIcon :name="kpi.icon" :size="16" />
-              </span>
-            </div>
-            <strong class="client-kpi-value">{{ kpi.value }}</strong>
-            <span class="client-kpi-meta">{{ kpi.meta }}</span>
+              <span class="client-kpi-meta">{{ kpi.meta }}</span>
+            </span>
+            <span class="client-kpi-count">{{ kpi.value }}</span>
           </button>
         </section>
 
@@ -514,20 +514,19 @@ onMounted(() => {
 
 .client-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
 }
 
 .client-kpi-card {
-  padding: 14px 16px;
-  border-radius: 16px;
+  padding: 8px 12px;
+  border-radius: 999px;
   border: 1px solid var(--dash-border);
   background: var(--dash-surface);
-  box-shadow: var(--dash-shadow);
+  box-shadow: 0 18px 40px -34px rgba(0, 0, 0, 0.6);
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 94px;
+  align-items: center;
+  gap: 10px;
 }
 
 .client-kpi-card--button {
@@ -541,39 +540,49 @@ onMounted(() => {
   outline-offset: 3px;
 }
 
-.client-kpi-top {
+.client-kpi-text {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .client-kpi-label {
   font-size: 0.78rem;
-  color: var(--dash-muted);
+  color: var(--dash-text);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .client-kpi-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   display: grid;
   place-items: center;
   color: var(--dash-primary);
 }
 
-.client-kpi-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.client-kpi-meta {
+  font-size: 0.7rem;
+  color: var(--dash-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.client-kpi-meta {
-  font-size: 0.8rem;
-  color: var(--dash-muted);
+.client-kpi-count {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--dash-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .next-reservation-card {
@@ -692,7 +701,7 @@ onMounted(() => {
 
 @media (max-width: 1200px) {
   .client-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
 }
 
@@ -718,10 +727,22 @@ onMounted(() => {
   }
 
   .client-kpi-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .next-reservation-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .client-kpi-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .client-kpi-grid {
     grid-template-columns: 1fr;
   }
 }

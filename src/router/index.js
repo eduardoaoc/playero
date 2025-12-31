@@ -26,9 +26,11 @@ const routes = [
     component: Login,
   },
   {
-    path: '/reservar',
-    name: 'reservar',
+    path: '/reservas',
+    name: 'reservas',
     component: Reserva,
+    meta: { public: true },
+    alias: '/reservar',
   },
   {
     path: '/admin',

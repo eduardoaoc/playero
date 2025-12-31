@@ -102,12 +102,131 @@
         </aside>
       </div>
     </main>
+
+    <div
+      v-if="isRegisterOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6 py-10"
+      @click="handleRegisterOverlay"
+    >
+      <div
+        class="w-full max-w-lg rounded-3xl border border-white/10 bg-[#15151B] p-6 text-white shadow-[0_30px_90px_-70px_rgba(0,0,0,0.9)]"
+        @click.stop
+      >
+        <header class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="text-xs uppercase tracking-[0.3em] text-white/50">Cadastro r&#225;pido</p>
+            <h3 class="text-xl font-semibold text-white">Crie sua conta para reservar</h3>
+            <p class="mt-2 text-sm text-white/60">
+              Complete o cadastro e confirme sua reserva agora mesmo.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
+            @click="closeRegisterModal"
+          >
+            &#10005;
+          </button>
+        </header>
+
+        <form class="mt-6 space-y-4" @submit.prevent="handleRegisterSubmit">
+          <label class="block text-xs uppercase tracking-[0.22em] text-white/50">
+            Nome completo
+            <input
+              v-model.trim="registerForm.nome"
+              type="text"
+              autocomplete="name"
+              placeholder="Seu nome"
+              :class="[
+                'mt-2 w-full rounded-2xl border bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-[#FF7A00]',
+                showRegisterNameError ? 'border-[#FF7A00]' : 'border-white/10',
+              ]"
+            />
+            <span v-if="showRegisterNameError" class="mt-2 block text-xs text-[#FF7A00]">
+              Informe seu nome.
+            </span>
+          </label>
+
+          <label class="block text-xs uppercase tracking-[0.22em] text-white/50">
+            Email
+            <input
+              v-model.trim="registerForm.email"
+              type="email"
+              autocomplete="email"
+              placeholder="voce@email.com"
+              :class="[
+                'mt-2 w-full rounded-2xl border bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-[#FF7A00]',
+                showRegisterEmailError ? 'border-[#FF7A00]' : 'border-white/10',
+              ]"
+            />
+            <span v-if="showRegisterEmailError" class="mt-2 block text-xs text-[#FF7A00]">
+              Informe um email v&#225;lido.
+            </span>
+          </label>
+
+          <label class="block text-xs uppercase tracking-[0.22em] text-white/50">
+            Senha
+            <input
+              v-model="registerForm.senha"
+              type="password"
+              autocomplete="new-password"
+              placeholder="Crie uma senha"
+              :class="[
+                'mt-2 w-full rounded-2xl border bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-[#FF7A00]',
+                showRegisterPasswordError ? 'border-[#FF7A00]' : 'border-white/10',
+              ]"
+            />
+            <span v-if="showRegisterPasswordError" class="mt-2 block text-xs text-[#FF7A00]">
+              Informe sua senha.
+            </span>
+          </label>
+
+          <label class="block text-xs uppercase tracking-[0.22em] text-white/50">
+            Confirmar senha
+            <input
+              v-model="registerForm.confirmarSenha"
+              type="password"
+              autocomplete="new-password"
+              placeholder="Repita a senha"
+              :class="[
+                'mt-2 w-full rounded-2xl border bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-[#FF7A00]',
+                showRegisterPasswordConfirmError || showRegisterPasswordMismatch
+                  ? 'border-[#FF7A00]'
+                  : 'border-white/10',
+              ]"
+            />
+            <span v-if="showRegisterPasswordConfirmError" class="mt-2 block text-xs text-[#FF7A00]">
+              Confirme sua senha.
+            </span>
+            <span v-else-if="showRegisterPasswordMismatch" class="mt-2 block text-xs text-[#FF7A00]">
+              As senhas n&#227;o conferem.
+            </span>
+          </label>
+
+          <div
+            v-if="registerError"
+            class="rounded-2xl border border-[#FF7A00]/50 bg-[#2a1a14] px-4 py-3 text-sm text-[#FFB570]"
+          >
+            {{ registerError }}
+          </div>
+
+          <button
+            type="submit"
+            class="mt-2 w-full rounded-full bg-[#FF7A00] px-6 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-20px_rgba(255,122,0,0.9)] transition hover:bg-[#FF8F26] disabled:cursor-not-allowed disabled:opacity-70"
+            :disabled="isRegisterSubmitting"
+          >
+            <span v-if="isRegisterSubmitting">Criando reserva...</span>
+            <span v-else>Cadastrar-se e reservar</span>
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import Header from '../components/Header.vue';
 import QuadraSelect from '../components/QuadraSelect.vue';
 import DateSelect from '../components/DateSelect.vue';
@@ -116,9 +235,14 @@ import ReservaResumo from '../components/ReservaResumo.vue';
 import { quadrasService } from '../services/quadrasService';
 import { normalizeHorarios, reservasService } from '../services/reservasService';
 import { useAgendaStore } from '../stores/useAgendaStore';
+import { useAuth } from '../stores/auth';
+import { useToast } from '../composables/useToast';
 
 const route = useRoute();
+const router = useRouter();
 const agendaStore = useAgendaStore();
+const auth = useAuth();
+const toast = useToast();
 
 const brandName = 'Playero';
 const logoSrc = '/images/logo-text.png';
@@ -138,6 +262,17 @@ const erroQuadras = ref('');
 const erroDisponibilidade = ref('');
 const erroReserva = ref('');
 const reservaCriada = ref(null);
+
+const isRegisterOpen = ref(false);
+const isRegisterSubmitting = ref(false);
+const registerSubmitted = ref(false);
+const registerError = ref('');
+const registerForm = reactive({
+  nome: '',
+  email: '',
+  senha: '',
+  confirmarSenha: '',
+});
 
 const calendarCells = ref([]);
 const currentMonth = ref(new Date());
@@ -246,6 +381,24 @@ const podeConfirmar = computed(
     !reservaCriada.value
 );
 
+const isValidEmail = (value) => /.+@.+\..+/.test(String(value || '').trim());
+
+const showRegisterNameError = computed(() => registerSubmitted.value && !registerForm.nome.trim());
+const showRegisterEmailError = computed(
+  () => registerSubmitted.value && (!registerForm.email.trim() || !isValidEmail(registerForm.email)),
+);
+const showRegisterPasswordError = computed(() => registerSubmitted.value && !registerForm.senha);
+const showRegisterPasswordConfirmError = computed(
+  () => registerSubmitted.value && !registerForm.confirmarSenha,
+);
+const showRegisterPasswordMismatch = computed(
+  () =>
+    registerSubmitted.value &&
+    registerForm.senha &&
+    registerForm.confirmarSenha &&
+    registerForm.senha !== registerForm.confirmarSenha,
+);
+
 const getValidationMessage = (error) => {
   const errors = error?.normalized?.errors;
   if (errors && typeof errors === 'object') {
@@ -259,6 +412,67 @@ const getValidationMessage = (error) => {
     }
   }
   return error?.normalized?.message || '';
+};
+
+const resetRegisterForm = () => {
+  registerForm.nome = '';
+  registerForm.email = '';
+  registerForm.senha = '';
+  registerForm.confirmarSenha = '';
+  registerSubmitted.value = false;
+  registerError.value = '';
+};
+
+const openRegisterModal = () => {
+  registerSubmitted.value = false;
+  registerError.value = '';
+  isRegisterOpen.value = true;
+};
+
+const closeRegisterModal = () => {
+  if (!isRegisterSubmitting.value) {
+    isRegisterOpen.value = false;
+  }
+};
+
+const handleRegisterOverlay = () => {
+  closeRegisterModal();
+};
+
+const resolveToken = (payload) =>
+  payload?.token ?? payload?.data?.token ?? payload?.access_token ?? payload?.data?.access_token ?? '';
+
+const resolveUserPayload = (payload) =>
+  payload?.user ?? payload?.data?.user ?? payload?.cliente ?? payload?.data?.cliente ?? null;
+
+const resolveReservaId = (payload) =>
+  payload?.reserva?.id ??
+  payload?.reservation?.id ??
+  payload?.data?.reserva?.id ??
+  payload?.data?.reservation?.id ??
+  payload?.data?.id ??
+  payload?.id ??
+  payload?.reserva_id ??
+  payload?.data?.reserva_id ??
+  null;
+
+const resolveReservaStatus = (payload) =>
+  payload?.reserva?.status ??
+  payload?.reservation?.status ??
+  payload?.data?.reserva?.status ??
+  payload?.data?.reservation?.status ??
+  payload?.data?.status ??
+  payload?.status ??
+  'pendente_pagamento';
+
+const setReservaCriada = (payload) => {
+  reservaCriada.value = {
+    id: resolveReservaId(payload),
+    status: resolveReservaStatus(payload),
+    quadra: quadraSelecionada.value?.name,
+    data: formatDisplayDate(dataSelecionada.value),
+    horario: formatHorarioLabel(horarioSelecionado.value),
+  };
 };
 
 const fetchQuadras = async () => {
@@ -532,8 +746,87 @@ const handleSelectHorario = (horarioId) => {
   horarioSelecionado.value = selected;
 };
 
+const handleRegisterSubmit = async () => {
+  if (isRegisterSubmitting.value) {
+    return;
+  }
+
+  registerSubmitted.value = true;
+  registerError.value = '';
+
+  if (
+    showRegisterNameError.value ||
+    showRegisterEmailError.value ||
+    showRegisterPasswordError.value ||
+    showRegisterPasswordConfirmError.value ||
+    showRegisterPasswordMismatch.value
+  ) {
+    return;
+  }
+
+  if (!podeConfirmar.value) {
+    registerError.value = 'Selecione quadra, data e hor\u00e1rio antes de continuar.';
+    return;
+  }
+
+  isRegisterSubmitting.value = true;
+
+  try {
+    const payload = await reservasService.createGuestReserva({
+      name: registerForm.nome.trim(),
+      email: registerForm.email.trim(),
+      password: registerForm.senha,
+      password_confirmation: registerForm.confirmarSenha,
+      quadra_id: quadraSelecionada.value.id,
+      data: dataSelecionada.value,
+      hora_inicio: horarioSelecionado.value.horaInicio,
+    });
+
+    const token = resolveToken(payload);
+    if (!token) {
+      registerError.value = 'N\u00e3o foi poss\u00edvel autenticar sua conta. Tente novamente.';
+      return;
+    }
+
+    auth.setToken(token);
+    const userPayload = resolveUserPayload(payload);
+    if (userPayload) {
+      auth.setUser(userPayload);
+    }
+
+    setReservaCriada(payload);
+    isRegisterOpen.value = false;
+    resetRegisterForm();
+    toast.success('Reserva confirmada com sucesso.');
+    await router.push('/cliente/reservas');
+  } catch (error) {
+    const status = error?.response?.status;
+    if (status === 403) {
+      registerError.value = error?.normalized?.message || 'Sem permiss\u00e3o para concluir a reserva.';
+      return;
+    }
+    if (status === 422) {
+      registerError.value = getValidationMessage(error) || 'Dados inv\u00e1lidos. Revise e tente novamente.';
+      return;
+    }
+    if (status === 409) {
+      registerError.value = 'Hor\u00e1rio indispon\u00edvel. Escolha outro hor\u00e1rio.';
+      return;
+    }
+    registerError.value = 'N\u00e3o foi poss\u00edvel concluir a reserva. Tente novamente.';
+  } finally {
+    isRegisterSubmitting.value = false;
+  }
+};
+
 const confirmarReserva = async () => {
   if (!podeConfirmar.value) {
+    return;
+  }
+
+  if (!auth.isAuthenticated.value) {
+    erroReserva.value = '';
+    openRegisterModal();
     return;
   }
 
@@ -546,17 +839,7 @@ const confirmarReserva = async () => {
       data: dataSelecionada.value,
       hora_inicio: horarioSelecionado.value.horaInicio,
     });
-
-    const reservaId = payload?.id ?? payload?.data?.id ?? payload?.reserva_id;
-    const status = payload?.status ?? payload?.data?.status ?? 'pendente_pagamento';
-
-    reservaCriada.value = {
-      id: reservaId,
-      status,
-      quadra: quadraSelecionada.value?.name,
-      data: formatDisplayDate(dataSelecionada.value),
-      horario: formatHorarioLabel(horarioSelecionado.value),
-    };
+    setReservaCriada(payload);
   } catch (error) {
     const status = error?.response?.status;
     if (status === 403) {
@@ -576,6 +859,12 @@ const confirmarReserva = async () => {
     loadingReserva.value = false;
   }
 };
+
+watch(isRegisterOpen, (isOpen) => {
+  if (!isOpen) {
+    resetRegisterForm();
+  }
+});
 
 watch(quadraSelecionada, () => {
   horarioSelecionado.value = null;

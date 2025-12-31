@@ -69,6 +69,10 @@ export const reservasService = {
     const response = await apiClient.post('/api/v1/reservas', payload);
     return unwrap(response);
   },
+  async createGuestReserva(payload) {
+    const response = await apiClient.post('/reservas/guest', payload);
+    return unwrap(response);
+  },
   async listReservas(params) {
     const response = await apiClient.get('/api/v1/reservas', { params });
     return unwrap(response);

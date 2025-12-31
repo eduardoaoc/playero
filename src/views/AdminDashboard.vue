@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="dashboard-shell">
     <Sidebar
       :brand="brand"
@@ -10,14 +10,46 @@
 
     <main class="dashboard-main">
       <div class="dashboard-content">
+        <section class="dashboard-section">
+          <CalendarGrid
+            :month="calendarMonth"
+            :year="calendarYear"
+            :cells="calendarCells"
+            :week-days="weekDays"
+            :is-loading="isCalendarLoading"
+            @select-day="openDayDetails"
+            @prev-month="goToPreviousMonth"
+            @next-month="goToNextMonth"
+          />
+        </section>
+
+        <section v-if="isCalendarEmpty" class="dashboard-section calendar-empty-grid">
+          <EmptyStateCard
+            title="Nenhuma reserva encontrada"
+            description="As reservas deste periodo aparecerao aqui."
+            icon="calendar"
+          />
+          <EmptyStateCard
+            title="Nenhum evento neste periodo"
+            description="Eventos e acoes especiais serao exibidos aqui."
+            icon="sparkle"
+          />
+        </section>
         <section class="dashboard-kpi-grid">
-          <KPI v-for="kpi in kpis" :key="kpi.title" :title="kpi.title" :value="kpi.value" :meta="kpi.meta" :icon="kpi.icon" />
+          <KPI
+            v-for="kpi in kpis"
+            :key="kpi.title"
+            :title="kpi.title"
+            :value="kpi.value"
+            :meta="kpi.meta"
+            :icon="kpi.icon"
+          />
         </section>
 
         <section class="dashboard-section">
           <SectionHeader
             title="Agenda"
-            subtitle="Próximos dias fechados e exceções futuras."
+            subtitle="Proximos dias fechados e excecoes futuras."
           />
 
           <div class="agenda-grid">
@@ -25,7 +57,7 @@
               <header class="agenda-card-header">
                 <div>
                   <p class="agenda-card-eyebrow">Fechamentos</p>
-                  <h3 class="agenda-card-title">Próximos dias fechados</h3>
+                  <h3 class="agenda-card-title">Proximos dias fechados</h3>
                 </div>
               </header>
 
@@ -47,14 +79,14 @@
             <div class="agenda-card">
               <header class="agenda-card-header">
                 <div>
-                  <p class="agenda-card-eyebrow">Exceções</p>
-                  <h3 class="agenda-card-title">Exceções futuras</h3>
+                  <p class="agenda-card-eyebrow">Excecoes</p>
+                  <h3 class="agenda-card-title">Excecoes futuras</h3>
                 </div>
               </header>
 
-              <div v-if="isAgendaExceptionsLoading" class="agenda-empty">Carregando exceções...</div>
+              <div v-if="isAgendaExceptionsLoading" class="agenda-empty">Carregando excecoes...</div>
               <div v-else-if="!futureExceptions.length" class="agenda-empty">
-                Nenhuma exceção futura.
+                Nenhuma excecao futura.
               </div>
               <ul v-else class="agenda-list">
                 <li v-for="exception in futureExceptions" :key="exception.key" class="agenda-item">
@@ -71,7 +103,6 @@
             </div>
           </div>
         </section>
-
         <section class="dashboard-section">
           <SectionHeader title="Quadras (status em tempo real)">
             <template #actions>
@@ -111,7 +142,6 @@
             />
           </div>
         </section>
-
         <section class="dashboard-section">
           <SectionHeader title="Eventos criados">
             <template #actions>
@@ -146,7 +176,7 @@
 
         <section class="dashboard-section dashboard-info">
           <div class="info-wrap">
-            <h2 class="info-title">Informações gerais</h2>
+            <h2 class="info-title">Informacoes gerais</h2>
             <div class="info-grid">
               <div v-for="card in infoCards" :key="card.id" class="info-card">
                 <span class="info-label">{{ card.label }}</span>
@@ -159,10 +189,16 @@
             </div>
           </div>
 
-          <AcoesRapidas title="Ações rápidas" :items="acoesRapidas" />
+          <AcoesRapidas title="Acoes rapidas" :items="acoesRapidas" />
         </section>
       </div>
     </main>
+
+    <DayDetailsModal
+      :open="Boolean(selectedDay)"
+      :day="selectedDay"
+      @close="closeDayModal"
+    />
 
     <NovaQuadraModal
       v-if="canManageQuadras"
@@ -193,8 +229,9 @@
   </div>
 </template>
 
+
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
 import KPI from '../components/KPI.vue';
 import SectionHeader from '../components/SectionHeader.vue';
@@ -204,6 +241,8 @@ import AcoesRapidas from '../components/AcoesRapidas.vue';
 import MobileNav from '../components/MobileNav.vue';
 import DashboardIcon from '../components/DashboardIcon.vue';
 import EmptyStateCard from '../components/EmptyStateCard.vue';
+import CalendarGrid from '../components/CalendarGrid.vue';
+import DayDetailsModal from '../components/DayDetailsModal.vue';
 import NovaQuadraModal from '../components/modals/NovaQuadraModal.vue';
 import ModalCriarCliente from '../components/modals/ModalCriarCliente.vue';
 import ModalCriarReserva from '../components/modals/ModalCriarReserva.vue';
@@ -245,10 +284,10 @@ const generalItems = computed(() =>
   baseGeneralItems.filter((item) => item.label !== 'Administradores' || isSuperAdmin.value),
 );
 
-const supportItems = [{ label: 'Configurações', icon: 'settings', href: '#' }];
+const supportItems = [{ label: 'Configura\u00e7\u00f5es', icon: 'settings', href: '#' }];
 
 const quickAction = {
-  title: 'Atalho rápido',
+  title: 'Atalho r\u00e1pido',
   description: 'Criar um novo evento em poucos cliques.',
   buttonLabel: 'Novo Evento',
   href: '#',
@@ -288,16 +327,36 @@ const quadras = ref([]);
 const eventos = ref([]);
 const isQuadrasLoading = ref(true);
 const isEventosLoading = ref(true);
+const isCalendarOverviewLoading = ref(false);
 
 const agendaLoading = agendaStore.loading;
 const isAgendaMonthLoading = computed(() => agendaLoading.value.month);
 const isAgendaExceptionsLoading = computed(() => agendaLoading.value.exceptions);
+const isCalendarLoading = computed(() => Boolean(isCalendarOverviewLoading.value));
+
+const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
+
+const today = new Date();
+const calendarMonth = ref(today.getMonth());
+const calendarYear = ref(today.getFullYear());
+const selectedDay = ref(null);
+
+const calendarReservas = ref([]);
+const calendarEventos = ref([]);
+const calendarBloqueios = ref([]);
+const calendarEspeciais = ref([]);
+const calendarObservacoes = ref([]);
 
 const formatLocalDate = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const parseISODateLocal = (dateStr) => {
+  const [year, month, day] = String(dateStr).split('-').map(Number);
+  return new Date(year, month - 1, day);
 };
 
 const resolveAgendaDateKey = (value) => {
@@ -323,7 +382,7 @@ const formatAgendaDate = (value) => {
   if (!key) {
     return value || '--';
   }
-  const date = new Date(`${key}T00:00:00`);
+  const date = parseISODateLocal(key);
   if (Number.isNaN(date.getTime())) {
     return key;
   }
@@ -371,7 +430,7 @@ const futureExceptions = computed(() => {
         label: formatAgendaDate(dateKey),
         hours: fechado ? 'Fechado o dia todo' : `${horaAbertura} - ${horaFechamento}`,
         motivo: exception?.motivo ?? '',
-        badgeLabel: fechado ? 'Fechado' : 'Hor\u00e1rio especial',
+        badgeLabel: fechado ? 'Fechado' : 'Horario especial',
         badgeClass: fechado ? 'agenda-badge--danger' : 'agenda-badge--warning',
       };
     })
@@ -391,8 +450,8 @@ const infoCards = [
   {
     id: 2,
     label: 'Alertas',
-    headline: '1 quadra em manuten\u00e7\u00e3o',
-    text: 'Verificar rede, ilumina\u00e7\u00e3o e areia.',
+    headline: '1 quadra em manutencao',
+    text: 'Verificar rede, iluminacao e areia.',
     details: [],
   },
   {
@@ -400,7 +459,7 @@ const infoCards = [
     label: 'Financeiro',
     headline: 'Resumo do dia (mock)',
     text: 'Receita prevista: R$ 3.420',
-    details: ['Ticket m\u00e9dio: R$ 68'],
+    details: ['Ticket medio: R$ 68'],
   },
   {
     id: 4,
@@ -515,7 +574,7 @@ const acoesRapidas = computed(() => [
     action: isSuperAdmin.value ? openCreateAdmin : null,
     href: isSuperAdmin.value ? '#' : '/admin/administradores',
   },
-  { label: 'Bloquear horário', icon: 'ban', href: '/admin/agenda' },
+  { label: 'Bloquear horario', icon: 'ban', href: '/admin/agenda' },
 ]);
 
 const mobileNav = [
@@ -525,6 +584,386 @@ const mobileNav = [
   { label: 'Eventos', icon: 'sparkle', href: '/admin/eventos' },
   { label: 'Perfil', icon: 'user', href: '#' },
 ];
+
+const buildDateKey = (year, monthIndex, day) => {
+  const monthValue = String(monthIndex + 1).padStart(2, '0');
+  const dayValue = String(day).padStart(2, '0');
+  return `${year}-${monthValue}-${dayValue}`;
+};
+
+const normalizeDateKey = (value) => {
+  if (!value) {
+    return '';
+  }
+  if (value instanceof Date) {
+    return buildDateKey(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.slice(0, 10);
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(raw)) {
+    const [day, month, year] = raw.split('/');
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+};
+
+const formatDayLabel = (dateKey) => {
+  if (!dateKey) {
+    return 'Dia selecionado';
+  }
+  const date = parseISODateLocal(dateKey);
+  if (Number.isNaN(date.getTime())) {
+    return dateKey;
+  }
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+
+const extractArray = (source, keys) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+  return [];
+};
+
+const normalizeReserva = (item, index) => {
+  const dateKey = normalizeDateKey(
+    item?.dataISO ?? item?.data ?? item?.date ?? item?.dia ?? item?.day,
+  );
+  if (!dateKey) {
+    return null;
+  }
+  const start =
+    item?.hora_inicio ??
+    item?.horaInicio ??
+    item?.hora ??
+    item?.horario ??
+    item?.start_time ??
+    item?.start ??
+    '';
+  const end =
+    item?.hora_fim ??
+    item?.horaFim ??
+    item?.end_time ??
+    item?.end ??
+    '';
+  const time = start && end ? `${start} - ${end}` : start || end || '';
+  return {
+    id: item?.id ?? item?.uuid ?? item?.codigo ?? index,
+    dateKey,
+    time,
+    court: item?.quadra ?? item?.quadra_nome ?? item?.court ?? item?.quadra?.nome ?? '',
+    status: item?.status ?? item?.estado ?? item?.state ?? '',
+    raw: item,
+  };
+};
+
+const normalizeCalendarEvento = (item, index) => {
+  const dateKey = normalizeDateKey(
+    item?.data ?? item?.date ?? item?.data_evento ?? item?.dataEvento ?? item?.meta,
+  );
+  if (!dateKey) {
+    return null;
+  }
+  const start =
+    item?.hora ??
+    item?.horario ??
+    item?.hora_inicio ??
+    item?.start_time ??
+    item?.start ??
+    '';
+  const end =
+    item?.hora_fim ??
+    item?.horaFim ??
+    item?.end_time ??
+    item?.end ??
+    '';
+  const time = start && end ? `${start} - ${end}` : start || end || '';
+  return {
+    id: item?.id ?? item?.uuid ?? index,
+    dateKey,
+    title: item?.title ?? item?.nome ?? item?.name ?? 'Evento',
+    time,
+    location: item?.location ?? item?.local ?? item?.endereco ?? '',
+    status: item?.status ?? item?.estado ?? item?.state ?? '',
+    raw: item,
+  };
+};
+
+const normalizeBloqueio = (item, index) => {
+  const dateKey = normalizeDateKey(item?.data ?? item?.date ?? item?.dia ?? item?.day);
+  if (!dateKey) {
+    return null;
+  }
+  return {
+    id: item?.id ?? item?.uuid ?? index,
+    dateKey,
+    reason: item?.motivo ?? item?.descricao ?? item?.reason ?? '',
+  };
+};
+
+const normalizeEspecial = (item, index) => {
+  const dateKey = normalizeDateKey(item?.data ?? item?.date ?? item?.dia ?? item?.day);
+  if (!dateKey) {
+    return null;
+  }
+  const reason = item?.motivo ?? item?.descricao ?? item?.reason ?? '';
+  const openTime = item?.hora_abertura ?? item?.horaAbertura ?? item?.open_time ?? '';
+  const closeTime = item?.hora_fechamento ?? item?.horaFechamento ?? item?.close_time ?? '';
+  const hours = openTime || closeTime ? `${openTime || '--:--'} - ${closeTime || '--:--'}` : '';
+  return {
+    id: item?.id ?? item?.uuid ?? index,
+    dateKey,
+    reason,
+    hours,
+    isHoliday: String(reason || '').toLowerCase().includes('feriado'),
+  };
+};
+
+const normalizeObservacao = (item, index) => {
+  const dateKey = normalizeDateKey(item?.data ?? item?.date ?? item?.dia ?? item?.day);
+  const note =
+    item?.note ?? item?.observacao ?? item?.observacoes ?? item?.comentario ?? item?.descricao ?? '';
+  if (!dateKey || !note) {
+    return null;
+  }
+  return {
+    id: item?.id ?? item?.uuid ?? index,
+    dateKey,
+    note,
+  };
+};
+
+
+const summaryByDate = computed(() => {
+  const summary = {};
+  const ensure = (dateKey) => {
+    if (!summary[dateKey]) {
+      summary[dateKey] = {
+        reservations: [],
+        events: [],
+        blocks: [],
+        specials: [],
+        notes: [],
+        specialHours: [],
+        isClosed: false,
+        isSpecial: false,
+        isHoliday: false,
+      };
+    }
+    return summary[dateKey];
+  };
+
+  calendarReservas.value.forEach((reservation) => {
+    const entry = ensure(reservation.dateKey);
+    entry.reservations.push(reservation);
+  });
+
+  calendarEventos.value.forEach((event) => {
+    const entry = ensure(event.dateKey);
+    entry.events.push(event);
+  });
+
+  calendarBloqueios.value.forEach((block) => {
+    const entry = ensure(block.dateKey);
+    entry.blocks.push(block);
+    entry.isClosed = true;
+    if (block.reason) {
+      entry.notes.push(block.reason);
+    }
+  });
+
+  calendarEspeciais.value.forEach((special) => {
+    const entry = ensure(special.dateKey);
+    entry.specials.push(special);
+    entry.isSpecial = true;
+    if (special.isHoliday) {
+      entry.isHoliday = true;
+    }
+    if (special.reason) {
+      entry.notes.push(special.reason);
+    }
+    if (special.hours) {
+      entry.specialHours.push(special.hours);
+    }
+  });
+
+  calendarObservacoes.value.forEach((note) => {
+    const entry = ensure(note.dateKey);
+    entry.notes.push(note.note);
+  });
+
+  Object.values(summary).forEach((entry) => {
+    entry.reservations.sort((a, b) => String(a?.time ?? '').localeCompare(String(b?.time ?? '')));
+    entry.events.sort((a, b) => String(a?.time ?? '').localeCompare(String(b?.time ?? '')));
+    entry.notes = [...new Set(entry.notes.filter(Boolean))];
+    entry.specialHours = [...new Set(entry.specialHours.filter(Boolean))];
+  });
+
+  return summary;
+});
+
+const resolveOccupiedSlots = (reservations) => {
+  if (!Array.isArray(reservations)) {
+    return [];
+  }
+  const unique = new Set();
+  reservations.forEach((reservation) => {
+    const time = reservation?.time;
+    if (time) {
+      unique.add(time);
+    }
+  });
+  return Array.from(unique).sort((a, b) => a.localeCompare(b));
+};
+
+const calendarCells = computed(() => {
+  const year = calendarYear.value;
+  const month = calendarMonth.value;
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const todayKey = buildDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  const cells = [];
+
+  for (let index = 0; index < totalCells; index += 1) {
+    const dayNumber = index - startOffset + 1;
+    const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
+
+    if (!inMonth) {
+      cells.push({
+        key: `empty-${year}-${month}-${index}`,
+        inMonth: false,
+      });
+      continue;
+    }
+
+    const dateKey = buildDateKey(year, month, dayNumber);
+    const summary = summaryByDate.value[dateKey] ?? {
+      reservations: [],
+      events: [],
+      blocks: [],
+      specials: [],
+      notes: [],
+      specialHours: [],
+      isClosed: false,
+      isSpecial: false,
+      isHoliday: false,
+    };
+    const day = {
+      date: dateKey,
+      reservations: summary.reservations,
+    };
+    const dayKey = day.date;
+    console.log('Dia do calendário:', day.date, day.reservations);
+    const reservationCount = summary.reservations.length;
+    const eventCount = summary.events.length;
+    const busyScore = reservationCount + eventCount;
+
+    cells.push({
+      key: dayKey,
+      dateKey: dayKey,
+      date: dayKey,
+      day: dayNumber,
+      inMonth: true,
+      isToday: dayKey === todayKey,
+      reservationCount,
+      eventCount,
+      isClosed: summary.isClosed,
+      isSpecial: summary.isSpecial,
+      isHoliday: summary.isHoliday,
+      isBusy: busyScore >= 6 || eventCount >= 3,
+      reservations: summary.reservations,
+      events: summary.events,
+      occupiedSlots: resolveOccupiedSlots(summary.reservations),
+      notes: summary.notes,
+      specialHours: summary.specialHours,
+    });
+  }
+
+  return cells;
+});
+
+const isCalendarEmpty = computed(() => {
+  const hasReservas = calendarReservas.value.length > 0;
+  const hasEventos = calendarEventos.value.length > 0;
+  const hasBloqueios = calendarBloqueios.value.length > 0;
+  const hasEspeciais = calendarEspeciais.value.length > 0;
+  return !(hasReservas || hasEventos || hasBloqueios || hasEspeciais);
+});
+
+const resolveStatus = (cell) => {
+  if (cell.isClosed) {
+    return {
+      label: 'Fechado',
+      tone: 'danger',
+      detail: cell.notes?.length ? `Motivo: ${cell.notes[0]}` : 'Fechado o dia todo',
+    };
+  }
+  if (cell.isHoliday) {
+    return {
+      label: 'Feriado',
+      tone: 'warning',
+      detail: cell.notes?.[0] ?? '',
+    };
+  }
+  if (cell.isSpecial) {
+    return {
+      label: 'Horario especial',
+      tone: 'warning',
+      detail: cell.specialHours?.[0] ?? '',
+    };
+  }
+  return {
+    label: 'Aberto',
+    tone: 'success',
+    detail: '',
+  };
+};
+
+const buildDayDetails = (cell) => {
+  const status = resolveStatus(cell);
+  return {
+    dateKey: cell.dateKey,
+    label: formatDayLabel(cell.dateKey),
+    statusLabel: status.label,
+    statusTone: status.tone,
+    statusDetail: status.detail,
+    reservations: cell.reservations ?? [],
+    events: cell.events ?? [],
+    occupiedSlots: cell.occupiedSlots ?? [],
+    notes: cell.notes ?? [],
+    specialHours: cell.specialHours ?? [],
+  };
+};
+
+const openDayDetails = (cell) => {
+  if (!cell?.inMonth) {
+    return;
+  }
+  selectedDay.value = buildDayDetails(cell);
+};
+
+const closeDayModal = () => {
+  selectedDay.value = null;
+};
+
+const goToPreviousMonth = () => {
+  const nextDate = new Date(calendarYear.value, calendarMonth.value - 1, 1);
+  calendarYear.value = nextDate.getFullYear();
+  calendarMonth.value = nextDate.getMonth();
+};
+
+const goToNextMonth = () => {
+  const nextDate = new Date(calendarYear.value, calendarMonth.value + 1, 1);
+  calendarYear.value = nextDate.getFullYear();
+  calendarMonth.value = nextDate.getMonth();
+};
 
 const resolveKpis = (payload) => {
   const data = payload?.data ?? payload ?? {};
@@ -574,7 +1013,7 @@ const resolveQuadraStatus = (quadra) => {
     return String(rawStatus);
   }
   if (quadra?.raw?.ativa === false || quadra?.raw?.ativo === false) {
-    return 'Manuten\u00e7\u00e3o';
+    return 'Manutencao';
   }
   return 'Livre';
 };
@@ -651,6 +1090,149 @@ const resolveEventos = (payload) => {
   return items.map(normalizeEvento).filter(Boolean);
 };
 
+const resolveCalendarReservas = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+  const items = extractArray(data, [
+    'reservas',
+    'reservations',
+    'agendamentos',
+    'calendar_reservas',
+    'calendarReservations',
+  ]);
+  return items.map(normalizeReserva).filter(Boolean);
+};
+
+const resolveCalendarEventos = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+  const items = extractArray(data, [
+    'eventos',
+    'events',
+    'eventos_criados',
+    'calendar_eventos',
+    'calendarEvents',
+  ]);
+  return items.map(normalizeCalendarEvento).filter(Boolean);
+};
+
+const resolveCalendarBloqueios = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+  const items = extractArray(data, ['bloqueios', 'blockings', 'blocks', 'calendar_bloqueios']);
+  return items.map(normalizeBloqueio).filter(Boolean);
+};
+
+const resolveCalendarEspeciais = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+  const items = extractArray(data, ['especiais', 'special_days', 'specials', 'holidays']);
+  return items.map(normalizeEspecial).filter(Boolean);
+};
+
+const resolveCalendarObservacoes = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+  const items = extractArray(data, ['observacoes', 'observations', 'notas', 'notes', 'comentarios']);
+  return items.map(normalizeObservacao).filter(Boolean);
+};
+
+const resolveCalendarOverviewDays = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+  if (Array.isArray(data?.days)) {
+    return data.days;
+  }
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (Array.isArray(payload?.days)) {
+    return payload.days;
+  }
+  return [];
+};
+
+const resolveCalendarOverview = (payload) => {
+  const days = resolveCalendarOverviewDays(payload);
+  const reservas = [];
+  const eventos = [];
+  const bloqueios = [];
+  const especiais = [];
+  const observacoes = [];
+
+  days.forEach((day) => {
+    const dayKey = normalizeDateKey(day?.date ?? day?.data ?? day?.day);
+    if (!dayKey) {
+      return;
+    }
+
+    const dayReservations = Array.isArray(day?.reservations) ? day.reservations : [];
+    dayReservations.forEach((reservation, index) => {
+      const normalized = normalizeReserva({ ...reservation, date: dayKey }, `${dayKey}-${index}`);
+      if (normalized) {
+        reservas.push(normalized);
+      }
+    });
+
+    const dayEvents = Array.isArray(day?.events) ? day.events : [];
+    dayEvents.forEach((event, index) => {
+      const normalized = normalizeCalendarEvento({ ...event, date: dayKey }, `${dayKey}-${index}`);
+      if (normalized) {
+        eventos.push(normalized);
+      }
+    });
+
+    const dayBlockings = Array.isArray(day?.blockings) ? day.blockings : [];
+    dayBlockings.forEach((blocking, index) => {
+      const normalized = normalizeBloqueio({ ...blocking, date: dayKey }, `${dayKey}-${index}`);
+      if (normalized) {
+        bloqueios.push(normalized);
+      }
+    });
+
+    if (day?.closed_all_day && !dayBlockings.length) {
+      const normalized = normalizeBloqueio(
+        {
+          id: `closed-${dayKey}`,
+          data: dayKey,
+          motivo: day?.reason ?? day?.label ?? 'Fechado',
+        },
+        `closed-${dayKey}`,
+      );
+      if (normalized) {
+        bloqueios.push(normalized);
+      }
+    }
+
+    const specialSchedule = day?.special_schedule ?? day?.special_hours ?? null;
+    if (specialSchedule) {
+      const normalized = normalizeEspecial(
+        {
+          id: specialSchedule?.id ?? `special-${dayKey}`,
+          data: dayKey,
+          motivo:
+            specialSchedule?.label ??
+            specialSchedule?.reason ??
+            specialSchedule?.motivo ??
+            '',
+          hora_abertura:
+            specialSchedule?.open ??
+            specialSchedule?.open_time ??
+            specialSchedule?.opening_time ??
+            specialSchedule?.hora_abertura ??
+            '',
+          hora_fechamento:
+            specialSchedule?.close ??
+            specialSchedule?.close_time ??
+            specialSchedule?.closing_time ??
+            specialSchedule?.hora_fechamento ??
+            '',
+        },
+        `special-${dayKey}`,
+      );
+      if (normalized) {
+        especiais.push(normalized);
+      }
+    }
+  });
+
+  return { reservas, eventos, bloqueios, especiais, observacoes };
+};
+
 const handleForbidden = (error, fallback) => {
   if (error?.response?.status !== 403) {
     return false;
@@ -674,9 +1256,28 @@ const loadDashboard = async () => {
     }
     eventos.value = resolveEventos(payload);
   } catch (error) {
-    handleForbidden(error, 'Sem permiss\u00e3o para acessar o dashboard.');
+    handleForbidden(error, 'Sem permissao para acessar o dashboard.');
   } finally {
     isEventosLoading.value = false;
+  }
+};
+
+const loadCalendarOverview = async () => {
+  const year = calendarYear.value;
+  const month = calendarMonth.value + 1;
+  isCalendarOverviewLoading.value = true;
+  try {
+    const payload = await adminDashboardService.getCalendarOverview({ year, month });
+    const normalized = resolveCalendarOverview(payload);
+    calendarReservas.value = normalized.reservas;
+    calendarEventos.value = normalized.eventos;
+    calendarBloqueios.value = normalized.bloqueios;
+    calendarEspeciais.value = normalized.especiais;
+    calendarObservacoes.value = normalized.observacoes;
+  } catch (error) {
+    handleForbidden(error, 'Sem permissao para carregar o calendario.');
+  } finally {
+    isCalendarOverviewLoading.value = false;
   }
 };
 
@@ -686,24 +1287,36 @@ const loadQuadras = async () => {
     const items = await quadrasService.listQuadras({ includeInactive: true });
     quadras.value = normalizeAdminQuadras(items);
   } catch (error) {
-    handleForbidden(error, 'Sem permiss\u00e3o para listar quadras.');
+    handleForbidden(error, 'Sem permissao para listar quadras.');
   } finally {
     isQuadrasLoading.value = false;
   }
 };
 
+const loadAgendaMonth = async () => {
+  const year = calendarYear.value;
+  const month = calendarMonth.value + 1;
+  await agendaStore.loadMonth({ year, month, ano: year, mes: month }, { force: true });
+};
+
 const loadAgendaHighlights = async () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth() + 1;
   await Promise.allSettled([
-    agendaStore.loadMonth({ year, month, ano: year, mes: month }, { force: true }),
+    loadAgendaMonth(),
     agendaStore.loadExceptions(),
   ]);
 };
 
+watch(
+  () => [calendarYear.value, calendarMonth.value],
+  () => {
+    loadAgendaMonth();
+    loadCalendarOverview();
+  },
+);
+
 onMounted(() => {
   loadDashboard();
+  loadCalendarOverview();
   loadQuadras();
   loadAgendaHighlights();
 });
@@ -765,6 +1378,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.calendar-empty-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .dashboard-quadra-grid {
@@ -984,6 +1603,10 @@ onMounted(() => {
   .dashboard-info {
     grid-template-columns: 1fr;
   }
+
+  .calendar-empty-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -1007,7 +1630,8 @@ onMounted(() => {
   .dashboard-quadra-grid,
   .dashboard-event-grid,
   .agenda-grid,
-  .info-grid {
+  .info-grid,
+  .calendar-empty-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1016,4 +1640,3 @@ onMounted(() => {
   }
 }
 </style>
-

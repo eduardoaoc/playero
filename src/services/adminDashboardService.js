@@ -7,4 +7,8 @@ export const adminDashboardService = {
     const response = await apiClient.get('/api/v1/admin/dashboard');
     return unwrap(response);
   },
+  async getCalendarOverview(params = {}) {
+    const response = await apiClient.get('/api/v1/calendar/overview', { params });
+    return unwrap(response);
+  },
 };
