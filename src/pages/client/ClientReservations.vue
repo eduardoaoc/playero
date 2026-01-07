@@ -48,7 +48,7 @@
           <div class="table-header">
             <div>
               <h3 class="table-title">Reservas encontradas</h3>
-              <p class="table-subtitle">Veja detalhes e atualiza\u00e7\u00f5es recentes.</p>
+              <p class="table-subtitle">Veja detalhes e atualizações recentes.</p>
             </div>
           </div>
 

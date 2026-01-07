@@ -14,7 +14,7 @@
       <div class="dashboard-content">
         <SectionHeader
           title="Dashboard do cliente"
-          subtitle="Resumo das suas reservas e solicita\u00e7\u00f5es."
+          subtitle="Resumo das suas reservas e solicitações."
         >
           <template #actions>
             <button class="dash-action dash-action--primary" type="button" @click="goToReserva">
@@ -44,7 +44,7 @@
         </section>
 
         <section class="dashboard-section">
-          <SectionHeader title="Pr\u00f3xima reserva" subtitle="Seu pr\u00f3ximo hor\u00e1rio confirmado." />
+          <SectionHeader title="Próxima reserva" subtitle="Seu próximo horário confirmado." />
 
           <div v-if="nextReservation" class="next-reservation-card">
             <header class="next-reservation-header">
@@ -80,7 +80,7 @@
           <EmptyStateCard
             v-else
             title="Nada encontrado"
-            description="Voc\u00ea ainda n\u00e3o possui reservas."
+            description="Você ainda não possui reservas."
             icon="calendar"
             action-label="Fazer uma reserva"
             :action-callback="goToReserva"
